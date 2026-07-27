@@ -1,0 +1,18 @@
+# Environment variables
+Backend/.env
+
+# Python
+Backend/__pycache__/
+Backend/.venv/
+Backend/venv/
+
+# Flutter
+frontend/build/
+frontend/.dart_tool/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
