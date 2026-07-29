@@ -52,7 +52,7 @@ class AstraApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'ASTRA',
       theme: AppTheme.darkTheme,
-      home: const GuardianManagementScreen(),
+      home: LocationPermissionScreen(),
     );
   }
 }

@@ -4,9 +4,13 @@ import '../../config/colors.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/nightsky.dart';
 import '../../widgets/primary_button.dart';
+import '../../services/permission_service.dart';
+import 'notification_screen.dart';
 
 class LocationPermissionScreen extends StatelessWidget {
-  const LocationPermissionScreen({super.key});
+  LocationPermissionScreen({super.key});
+
+  final PermissionService permissionService = PermissionService();
 
   @override
   Widget build(BuildContext context) {
@@ -89,13 +93,37 @@ class LocationPermissionScreen extends StatelessWidget {
 
                           PrimaryButton(
                             text: 'Allow Location',
-                            onPressed: () {},
+                            onPressed: () async {
+                              bool granted =
+                                await permissionService.requestLocationPermission();
+
+                            if (granted) {
+                              print("Location permission granted");
+                            } else {
+                              print("Location permission denied");
+                            }
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const NotificationScreen(),
+                              ),
+                            );
+
+                            },
                           ),
 
                           const SizedBox(height: 16),
 
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () async {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const NotificationScreen(),
+                                ),
+                              );
+                            },
                             child: const Text(
                               'Not Now',
                               style: TextStyle(

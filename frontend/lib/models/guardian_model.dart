@@ -21,7 +21,7 @@ class GuardianModel {
     Map<String, dynamic> map,
     String documentId,
   ) {
-    return GuardianModel(
+    return GuardianModel( // returns the dictionary
       id: documentId,
       name: map['name'] ?? '',
       phone: map['phone'] ?? '',
@@ -32,7 +32,7 @@ class GuardianModel {
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    return {  // returns the string and dynamic
       'name': name,
       'phone': phone,
       'relationship': relationship,
