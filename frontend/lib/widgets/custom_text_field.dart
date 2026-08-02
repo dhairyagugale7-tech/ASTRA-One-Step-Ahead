@@ -38,7 +38,7 @@ class CustomTextField extends StatelessWidget {
           ),
 
           filled: true,
-          fillColor: AppColors.glassWhite.withOpacity(0.05),
+          fillColor: AppColors.glassWhite.withValues(alpha: 0.05),
 
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 18,
@@ -48,7 +48,7 @@ class CustomTextField extends StatelessWidget {
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(0),
             borderSide: BorderSide(
-              color: AppColors.purpleBorder.withOpacity(0.25),
+              color: AppColors.purpleBorder.withValues(alpha: 0.25),
               width: 1,
             ),
           ),
@@ -56,7 +56,7 @@ class CustomTextField extends StatelessWidget {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(0),
             borderSide: BorderSide(
-              color: AppColors.purpleBorder.withOpacity(0.55),
+              color: AppColors.purpleBorder.withValues(alpha: 0.55),
               width: 1.2,
             ),
           ),

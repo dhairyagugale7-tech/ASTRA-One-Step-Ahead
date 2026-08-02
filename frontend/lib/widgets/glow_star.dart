@@ -28,7 +28,7 @@ class GlowStar extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               blurRadius: size * 3,
               spreadRadius: size * 0.4,
             ),

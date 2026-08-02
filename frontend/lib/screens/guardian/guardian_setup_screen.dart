@@ -4,6 +4,9 @@ import '../../config/colors.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/nightsky.dart';
 import '../../widgets/primary_button.dart';
+import 'add_guardian_screen.dart';
+import '../home/home_screen.dart';
+import '../profile/profile_screen.dart';
 
 class GuardianSetupScreen extends StatelessWidget {
   const GuardianSetupScreen({super.key});
@@ -67,7 +70,14 @@ class GuardianSetupScreen extends StatelessWidget {
 
                           PrimaryButton(
                             text: 'Add Guardians',
-                            onPressed: () {},
+                            onPressed: () async {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AddGuardianScreen(),
+                                ),
+                              );
+                            },
                           ),
 
                           const SizedBox(height: 36),
@@ -87,7 +97,14 @@ class GuardianSetupScreen extends StatelessWidget {
                           const SizedBox(height: 24),
 
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () async {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => HomeScreen(),
+                                ),
+                              );
+                            },
                             child: const Text(
                               'Not Now',
                               style: TextStyle(
@@ -114,7 +131,12 @@ class GuardianSetupScreen extends StatelessWidget {
             right: 20,
             child: GestureDetector(
               onTap: () {
-                // Navigate to Profile
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProfileScreen(),
+                    ),
+                  );
               },
               child: const CircleAvatar(
                 radius: 24,

@@ -27,7 +27,7 @@ class SOSButton extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFD79AE8).withOpacity(0.45),
+              color: const Color(0xFFD79AE8).withValues(alpha: 0.45),
               blurRadius: 35,
               spreadRadius: 2,
             ),

@@ -5,20 +5,66 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/nightsky.dart';
 import '../../widgets/primary_button.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
 import '../home/home_screen.dart';
+import '../../services/firestore_service.dart';
 
-class ProfileScreen extends StatelessWidget {
-  ProfileScreen({super.key});
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
 
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
   // Temporary Data
-  // Later these values will come from Firebase.
+  final FirestoreService firestoreService = FirestoreService();
 
-  final String name = 'Dhairya Gugale';
-  final String phoneNumber = '+91 9876543210';
-  final String email = 'dhairya@gmail.com';
-  final String primaryGuardian = 'Mom';
+  String name = "";
+  String phoneNumber = "";
+  String email = "";
+
+  bool isLoading = true;
+
+  Future<void> loadUserData() async {
+
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) return;
+
+    final userData =
+        await firestoreService.getUserData(currentUser.uid);
+
+    if (userData != null) {
+
+      setState(() {
+
+        name = userData['name'] ?? '';
+
+        phoneNumber = userData['phone'] ?? '';
+
+        email = userData['email'] ?? '';
+
+        isLoading = false;
+
+      });
+
+    } else {
+      setState(() {
+        isLoading = false;
+      });
+    }
+
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadUserData();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,60 +106,21 @@ class ProfileScreen extends StatelessWidget {
 
                       const SizedBox(height: 25),
 
-                      GlassCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-
-                            Text(
-                              'Name : $name',
-                              style: const TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-
-                            const SizedBox(height: 18),
-
-                            Text(
-                              'Phone Number : $phoneNumber',
-                              style: const TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-
-                            const SizedBox(height: 18),
-
-                            Text(
-                              'Email : $email',
-                              style: const TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-
-                            const SizedBox(height: 18),
-
-                            Text(
-                              'Primary Guardian : $primaryGuardian',
-                              style: const TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-
-                          ],
+                      if (isLoading)
+                        const Center(
+                          child: CircularProgressIndicator(),
+                        )
+                      else
+                        GlassCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Name : $name'),
+                              Text('Phone Number : $phoneNumber'),
+                              Text('Email : $email')
+                            ],
+                          ),
                         ),
-                      ),
 
                       const SizedBox(height: 28),
 

@@ -15,6 +15,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../home/home_screen.dart';
 import 'login_screen.dart';
+import '../auth/location_permission_screen.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -218,7 +219,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const HomeScreen(),
+                              builder: (context) => LocationPermissionScreen(),
                             ),
                           );
 

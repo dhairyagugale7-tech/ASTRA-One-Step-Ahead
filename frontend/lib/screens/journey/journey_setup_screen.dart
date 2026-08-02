@@ -1,15 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/guardian/guardian_management_screen.dart';
+import 'package:frontend/screens/journey/guardian_selection_screen.dart';
 
 import '../../config/colors.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/nightsky.dart';
 import '../../widgets/primary_button.dart';
+import '../../services/journey_service.dart';
+import '../../models/journey_model.dart';
+import '../journey/journey_active_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class JourneySetupScreen extends StatelessWidget {
-  JourneySetupScreen({super.key});
+class JourneySetupScreen extends StatefulWidget {
+  const JourneySetupScreen({super.key});
 
-  final String selectedGuardians = 'No Guardians Selected';
+  @override
+  State<JourneySetupScreen> createState() => _JourneySetupScreenState();
+}
+
+class _JourneySetupScreenState extends State<JourneySetupScreen> {
+
+  final JourneyService journeyService = JourneyService();
+
+  final TextEditingController destinationController =
+    TextEditingController();
+
+  List<String> selectedGuardians = [];
+
+  bool shareLiveLocation = true;
+
+  bool smartCheckins = true;
+
+  void showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
+    );
+  }
+
+  bool validateInputs() {
+
+    if (destinationController.text.trim().isEmpty) {
+      showMessage("Please enter your destination.");
+      return false;
+    }
+
+    if (selectedGuardians.isEmpty) {
+      showMessage("Please select at least one guardian.");
+      return false;
+    }
+
+    return true;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,15 +104,27 @@ class JourneySetupScreen extends StatelessWidget {
                         child: Column(
                           children: [
 
-                            const CustomTextField(
+                            CustomTextField(
+                              controller: destinationController,
                               hintText: 'Where Are You Going?',
                             ),
 
                             const SizedBox(height: 20),
 
                             GestureDetector(
-                              onTap: () {
-                                // Navigate to Guardian Selection Screen
+                              onTap: () async {
+                                final List<String>? guardians = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const GuardianSelectionScreen(),
+                                  ),
+                                );
+
+                                if (guardians != null) {
+                                  setState(() {
+                                    selectedGuardians = guardians;
+                                  });
+                                }
                               },
                               child: Container(
                                 width: double.infinity,
@@ -100,7 +156,7 @@ class JourneySetupScreen extends StatelessWidget {
                               width: double.infinity,
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.05),
+                                color: Colors.white.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(18),
                               ),
                               child: Column(
@@ -119,7 +175,9 @@ class JourneySetupScreen extends StatelessWidget {
                                   const SizedBox(height: 15),
 
                                   Text(
-                                    selectedGuardians,
+                                    selectedGuardians.isEmpty
+                                        ? 'No Guardians Selected'
+                                        : selectedGuardians.join(', '),
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
                                       fontFamily: 'PlusJakartaSans',
@@ -135,8 +193,12 @@ class JourneySetupScreen extends StatelessWidget {
                             const SizedBox(height: 25),
 
                             CheckboxListTile(
-                              value: true,
-                              onChanged: (_) {},
+                              value: shareLiveLocation,
+                              onChanged: (value) {
+                                setState(() {
+                                  shareLiveLocation = value!;
+                                });
+                              },
                               activeColor: Colors.white,
                               checkColor: AppColors.buttonGradientStart,
                               controlAffinity:
@@ -153,8 +215,12 @@ class JourneySetupScreen extends StatelessWidget {
                             ),
 
                             CheckboxListTile(
-                              value: true,
-                              onChanged: (_) {},
+                              value: smartCheckins,
+                              onChanged: (value) {
+                                setState(() {
+                                  smartCheckins = value!;
+                                });
+                              },
                               activeColor: Colors.white,
                               checkColor: AppColors.buttonGradientStart,
                               controlAffinity:
@@ -175,7 +241,42 @@ class JourneySetupScreen extends StatelessWidget {
                             PrimaryButton(
                               text: 'Start Guardian Journey',
                               width: 260,
-                              onPressed: () {},
+                              onPressed: () async {
+
+                                if (!validateInputs()) return;
+
+                                try {
+
+                                  JourneyModel journey = JourneyModel(
+                                    id: '',
+                                    destination: destinationController.text.trim(),
+                                    guardians: selectedGuardians,
+                                    shareLiveLocation: shareLiveLocation,
+                                    smartCheckins: smartCheckins,
+                                    isActive: true,
+                                    startedAt: Timestamp.now(),
+                                  );
+  
+                                  await journeyService.startJourney(journey);
+
+                                  if (!mounted) return;
+
+                                  showMessage("Guardian Journey Started Successfully!");
+
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => JourneyActiveScreen(),
+                                    ),
+                                  );
+
+                                } catch (e) {
+
+                                  showMessage("Something went wrong.");
+
+                                }
+
+                              },
                             ),
 
                           ],

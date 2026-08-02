@@ -4,9 +4,13 @@ import '../../config/colors.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/nightsky.dart';
 import '../../widgets/primary_button.dart';
+import '../../services/permission_service.dart';
+import '../guardian/guardian_setup_screen.dart';
 
 class NotificationScreen extends StatelessWidget {
-  const NotificationScreen({super.key});
+  NotificationScreen({super.key});
+
+  final PermissionService permissionService = PermissionService();
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +94,25 @@ class NotificationScreen extends StatelessWidget {
                           PrimaryButton(
                             text: 'Enable Notifications',
                             fontSize: 17,
-                            onPressed: () {},
+                            onPressed: () async {
+
+                              bool granted =
+                                  await permissionService.requestNotificationPermission();
+
+                              if (granted) {
+                                print("Notification permission granted");
+                              } else {
+                                print("Notification permission denied");
+                              }
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const GuardianSetupScreen(),
+                                ),
+                              );
+
+                            },
                           ),
 
                           const SizedBox(height: 16),

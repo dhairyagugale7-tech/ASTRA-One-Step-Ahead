@@ -16,4 +16,13 @@ class FirestoreService {
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
+
+  Future<Map<String, dynamic>?> getUserData(String uid) async {
+
+    final document =
+        await _firestore.collection('users').doc(uid).get();
+
+    return document.data();
+
+  }
 }

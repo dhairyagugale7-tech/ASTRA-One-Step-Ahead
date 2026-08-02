@@ -6,7 +6,7 @@ import '../../widgets/nightsky.dart';
 import '../../widgets/primary_button.dart';
 
 class JourneyCompletedScreen extends StatelessWidget {
-  JourneyCompletedScreen({super.key});
+  const JourneyCompletedScreen({super.key});
 
   // Temporary values
   // Later these will come from Firebase.

@@ -106,7 +106,7 @@ class LocationPermissionScreen extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const NotificationScreen(),
+                                builder: (_) => NotificationScreen(),
                               ),
                             );
 
@@ -120,7 +120,7 @@ class LocationPermissionScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const NotificationScreen(),
+                                  builder: (_) => NotificationScreen(),
                                 ),
                               );
                             },

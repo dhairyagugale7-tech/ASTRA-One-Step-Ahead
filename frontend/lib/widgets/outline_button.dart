@@ -23,10 +23,10 @@ class OutlineButton extends StatelessWidget {
 
         style: OutlinedButton.styleFrom(
           backgroundColor:
-              AppColors.glassWhite.withOpacity(0.05),
+              AppColors.glassWhite.withValues(alpha: 0.05),
 
           side: BorderSide(
-            color: AppColors.purpleBorder.withOpacity(0.20),
+            color: AppColors.purpleBorder.withValues(alpha: 0.20),
             width: 1,
           ),
 

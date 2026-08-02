@@ -6,6 +6,7 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/sos_button.dart';
 
 import '../../screens/profile/profile_screen.dart';
+import '../journey/journey_setup_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final int safetyScore = 100;
@@ -58,7 +59,14 @@ class HomeScreen extends StatelessWidget {
                       const SizedBox(height: 40),
 
                       GestureDetector(
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => JourneySetupScreen(),
+                            ),
+                          );
+                        },
                         child: Container(
                           width: double.infinity,
                           height: 85,
@@ -73,7 +81,7 @@ class HomeScreen extends StatelessWidget {
                               ],
                             ),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.18),
+                              color: Colors.white.withValues(alpha: 0.18),
                             ),
                           ),
                           child: const Center(
