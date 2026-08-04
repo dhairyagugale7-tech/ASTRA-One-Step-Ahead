@@ -12,6 +12,10 @@ import 'package:geolocator/geolocator.dart';
 import '../../services/location_service.dart';
 import '../../models/journey_model.dart';
 
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../../services/route_service.dart';
+
 class JourneyActiveScreen extends StatefulWidget {
 
   final JourneyModel journey;
@@ -30,9 +34,13 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
 
   final LocationService locationService = LocationService();
 
+  final RouteService routeService = RouteService();
+
   Position? currentPosition;
   
   Set<Marker> markers = {};
+
+  Set<Polyline> polylines = {};
 
   static const CameraPosition initialPosition = CameraPosition(
     target: LatLng(18.5204, 73.8567), // Pune
@@ -94,6 +102,30 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
         ),
       );
 
+      final route = await routeService.getRoute(
+        originLat: currentPosition!.latitude,
+        originLng: currentPosition!.longitude,
+        destinationLat: widget.journey.destinationLatitude,
+        destinationLng: widget.journey.destinationLongitude,
+      );
+
+      print(route.length);
+
+      polylines.add(
+        Polyline(
+          polylineId: const PolylineId("route"),
+          width: 6,
+          points: route
+              .map(
+                (point) => LatLng(
+                  point.latitude,
+                  point.longitude,
+                ),
+              )
+              .toList(),
+        ),
+      );
+
       setState(() {});
 
     } catch (e) {
@@ -149,6 +181,7 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
                           child: GoogleMap(
                             initialCameraPosition: initialPosition,
                             markers: markers,
+                            polylines: polylines,
                             myLocationEnabled: true,
                             myLocationButtonEnabled: true,
                             zoomControlsEnabled: false,
