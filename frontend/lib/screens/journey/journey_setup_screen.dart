@@ -12,6 +12,9 @@ import '../../models/journey_model.dart';
 import '../journey/journey_active_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../services/location_service.dart';
+import '../../services/place_service.dart';
+
 class JourneySetupScreen extends StatefulWidget {
   const JourneySetupScreen({super.key});
 
@@ -19,9 +22,16 @@ class JourneySetupScreen extends StatefulWidget {
   State<JourneySetupScreen> createState() => _JourneySetupScreenState();
 }
 
-class _JourneySetupScreenState extends State<JourneySetupScreen> {
+class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBindingObserver{
 
   final JourneyService journeyService = JourneyService();
+  final LocationService locationService = LocationService();
+
+  final PlaceService placeService = PlaceService();
+
+  List<dynamic> placeSuggestions = [];
+
+  dynamic selectedPlace;
 
   final TextEditingController destinationController =
     TextEditingController();
@@ -31,6 +41,10 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> {
   bool shareLiveLocation = true;
 
   bool smartCheckins = true;
+
+  bool waitingForLocation = false;
+
+  bool isSelectingPlace = false;
 
   void showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -52,7 +66,186 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> {
       return false;
     }
 
+    if (selectedPlace == null) {
+      showMessage("Please select a destination from the suggestions.");
+      return false;
+    }
+
     return true;
+  }
+  
+  Future<bool> checkLocationService() async {
+
+    bool isEnabled =
+        await locationService.isLocationServiceEnabled();
+
+    if (!isEnabled) {
+
+      final openSettings = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1D1A35),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              "Location Required",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: const Text(
+              "Please turn on your device location to start your Guardian Journey.",
+              style: TextStyle(
+                color: Colors.white70,
+              ),
+            ),
+            actions: [
+
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context, false);
+                },
+                child: const Text(
+                  "Cancel",
+                  style: TextStyle(
+                    color: Colors.white70,
+                  ),
+                ),
+              ),
+
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context, true);
+                },
+                child: const Text("Open Settings"),
+              ),
+
+            ],
+          );
+        },
+      );
+
+      if (openSettings == true) {
+
+        bool waitingForLocation = true;
+
+        await locationService.openLocationSettings();
+
+      }
+
+      return false;
+    }
+
+    return true;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
+
+    destinationController.addListener(() async {
+
+      if (isSelectingPlace) return;
+
+      print("Typed: ${destinationController.text}");
+
+      placeSuggestions = await placeService.searchPlaces(
+        destinationController.text,
+      );
+
+      setState(() {});
+
+    });
+
+  }
+
+  @override
+  void dispose() {
+
+    WidgetsBinding.instance.removeObserver(this);
+
+    destinationController.dispose();
+
+    super.dispose();
+
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+
+    print("State: $state");
+    print("waitingForLocation = $waitingForLocation");
+
+    if (state == AppLifecycleState.resumed && waitingForLocation) {
+
+      print("Checking GPS...");
+
+      bool isEnabled =
+          await locationService.isLocationServiceEnabled();
+
+      print("GPS Enabled: $isEnabled");
+
+      if (isEnabled) {
+
+        waitingForLocation = false;
+
+        print("Starting Journey...");
+
+        await startJourney();
+
+      }
+
+    }
+
+  }
+
+  Future<void> startJourney() async {
+
+    try {
+
+      JourneyModel journey = JourneyModel(
+        id: '',
+        destination: destinationController.text.trim(),
+
+        destinationLatitude:
+            selectedPlace["geometry"]["location"]["lat"],
+
+        destinationLongitude:
+            selectedPlace["geometry"]["location"]["lng"],
+
+        guardians: selectedGuardians,
+        shareLiveLocation: shareLiveLocation,
+        smartCheckins: smartCheckins,
+        isActive: true,
+        startedAt: Timestamp.now(),
+      );
+
+      await journeyService.startJourney(journey);
+
+      if (!mounted) return;
+
+      showMessage("Guardian Journey Started Successfully!");
+
+      waitingForLocation = false;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => JourneyActiveScreen(journey: journey,),
+        ),
+      );
+
+    } catch (e) {
+
+      showMessage("Something went wrong.");
+
+    }
+
   }
 
   @override
@@ -104,9 +297,74 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> {
                         child: Column(
                           children: [
 
-                            CustomTextField(
-                              controller: destinationController,
-                              hintText: 'Where Are You Going?',
+                            Column(
+                              children: [
+
+                                CustomTextField(
+                                  controller: destinationController,
+                                  hintText: 'Where Are You Going?',
+                                ),
+
+                                if (placeSuggestions.isNotEmpty)
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF2A2448),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      maxHeight: 220,
+                                    ),
+                                    child: ListView.builder(
+                                      shrinkWrap: true,
+                                      itemCount: placeSuggestions.length,
+                                      itemBuilder: (context, index) {
+
+                                        final place = placeSuggestions[index];
+
+                                        return ListTile(
+                                          leading: const Icon(
+                                            Icons.location_on,
+                                            color: Colors.white70,
+                                          ),
+
+                                          title: Text(
+                                            place["description"],
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+
+                                          onTap: () async {
+
+                                            isSelectingPlace = true;
+
+                                            final details = await placeService.getPlaceDetails(
+                                              place["place_id"],
+                                            );
+
+                                            if (details != null) {
+
+                                              destinationController.text =
+                                                  details["formatted_address"];
+
+                                              selectedPlace = details;
+
+                                              placeSuggestions.clear();
+
+                                              setState(() {});
+
+                                            }
+
+                                            isSelectingPlace = false;
+
+                                          }
+                                        );
+                                      },
+                                    ),
+                                  ),
+
+                              ],
                             ),
 
                             const SizedBox(height: 20),
@@ -245,38 +503,11 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> {
 
                                 if (!validateInputs()) return;
 
-                                try {
+                                if (!await checkLocationService()) return;
 
-                                  JourneyModel journey = JourneyModel(
-                                    id: '',
-                                    destination: destinationController.text.trim(),
-                                    guardians: selectedGuardians,
-                                    shareLiveLocation: shareLiveLocation,
-                                    smartCheckins: smartCheckins,
-                                    isActive: true,
-                                    startedAt: Timestamp.now(),
-                                  );
-  
-                                  await journeyService.startJourney(journey);
+                                await startJourney();
 
-                                  if (!mounted) return;
-
-                                  showMessage("Guardian Journey Started Successfully!");
-
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => JourneyActiveScreen(),
-                                    ),
-                                  );
-
-                                } catch (e) {
-
-                                  showMessage("Something went wrong.");
-
-                                }
-
-                              },
+                              }
                             ),
 
                           ],

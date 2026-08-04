@@ -8,8 +8,18 @@ import '../../widgets/sos_button.dart';
 import '../../services/journey_service.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'package:geolocator/geolocator.dart';
+import '../../services/location_service.dart';
+import '../../models/journey_model.dart';
+
 class JourneyActiveScreen extends StatefulWidget {
-  const JourneyActiveScreen({super.key});
+
+  final JourneyModel journey;
+
+  const JourneyActiveScreen({
+    super.key,
+    required this.journey,
+  });
 
   @override
   State<JourneyActiveScreen> createState() => _JourneyActiveScreenState();
@@ -18,6 +28,12 @@ class JourneyActiveScreen extends StatefulWidget {
 class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
   GoogleMapController? mapController;
 
+  final LocationService locationService = LocationService();
+
+  Position? currentPosition;
+  
+  Set<Marker> markers = {};
+
   static const CameraPosition initialPosition = CameraPosition(
     target: LatLng(18.5204, 73.8567), // Pune
     zoom: 14,
@@ -25,43 +41,64 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
   // Temporary values
   final String eta = '18 mins';
 
-  final JourneyService journeyService = JourneyService();
-
-  String destination = "";
-
-  List<String> guardians = [];
-
-  bool isLoading = true;
-
   final int aiScore = 92;
 
   final String aiStatus = 'Safe';
 
-  Future<void> loadLatestJourney() async {
+  Future<void> getCurrentLocation() async {
 
-    final journeys = await journeyService.getJourneys();
+    try {
 
-    if (journeys.isNotEmpty) {
+      currentPosition =
+          await locationService.getCurrentLocation();
 
-      final latestJourney = journeys.first;
+      final bounds = LatLngBounds(
+        southwest: LatLng(
+          currentPosition!.latitude < widget.journey.destinationLatitude
+              ? currentPosition!.latitude
+              : widget.journey.destinationLatitude,
+          currentPosition!.longitude < widget.journey.destinationLongitude
+              ? currentPosition!.longitude
+              : widget.journey.destinationLongitude,
+        ),
+        northeast: LatLng(
+          currentPosition!.latitude > widget.journey.destinationLatitude
+              ? currentPosition!.latitude
+              : widget.journey.destinationLatitude,
+          currentPosition!.longitude > widget.journey.destinationLongitude
+              ? currentPosition!.longitude
+              : widget.journey.destinationLongitude,
+        ),
+      );
 
-      setState(() {
+      mapController?.animateCamera(
+        CameraUpdate.newLatLngBounds(bounds, 80),
+      );
 
-        destination = latestJourney.destination;
+      print(widget.journey.destination);
+      print(widget.journey.destinationLatitude);
+      print(widget.journey.destinationLongitude);
 
-        guardians = latestJourney.guardians;
+      print(currentPosition!.latitude);
+      print(currentPosition!.longitude);
+      markers.add(
+        Marker(
+          markerId: const MarkerId("destination"),
+          position: LatLng(
+            widget.journey.destinationLatitude,
+            widget.journey.destinationLongitude,
+          ),
+          infoWindow: InfoWindow(
+            title: widget.journey.destination,
+          ),
+        ),
+      );
 
-        isLoading = false;
+      setState(() {});
 
-      });
+    } catch (e) {
 
-    } else {
-
-      setState(() {
-
-        isLoading = false;
-
-      });
+      print(e);
 
     }
 
@@ -70,7 +107,6 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
   @override
   void initState() {
     super.initState();
-    loadLatestJourney();
   }
 
   @override
@@ -112,23 +148,19 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
                           height: 250,
                           child: GoogleMap(
                             initialCameraPosition: initialPosition,
+                            markers: markers,
                             myLocationEnabled: true,
                             myLocationButtonEnabled: true,
                             zoomControlsEnabled: false,
                             onMapCreated: (GoogleMapController controller) {
                               mapController = controller;
+                              getCurrentLocation();
                             },
                           ),
                         ),
                       ),
 
                       const SizedBox(height: 25),
-
-                      if (isLoading)
-                        const Center(
-                          child: CircularProgressIndicator(),
-                        )
-                      else
 
                         GlassCard(
                           child: Center(
@@ -152,7 +184,7 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
                             children: [
 
                               Text(
-                                'Destination : $destination',
+                                'Destination : ${widget.journey.destination}',
                                 style: const TextStyle(
                                   fontFamily: 'PlusJakartaSans',
                                   fontSize: 20,
@@ -164,7 +196,7 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
                               const SizedBox(height: 18),
 
                               Text(
-                                'Selected Guardians : ${guardians.join(", ")}',
+                                'Selected Guardians : ${widget.journey.guardians.join(", ")}',
                                 style: const TextStyle(
                                   fontFamily: 'PlusJakartaSans',
                                   fontSize: 20,
