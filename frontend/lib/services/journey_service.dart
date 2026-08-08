@@ -8,15 +8,42 @@ class JourneyService {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Future<void> startJourney(JourneyModel journey) async {
+  Future<String> startJourney(JourneyModel journey) async {
+    try {
+      final uid = _auth.currentUser!.uid;
 
-    final uid = _auth.currentUser!.uid;
+      final docRef = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('journeys')
+          .add(journey.toMap());
 
-    await _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('journeys')
-        .add(journey.toMap());
+      return docRef.id;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> updateLiveLocation({
+    required String journeyId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    try {
+      final uid = _auth.currentUser!.uid;
+
+      await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('journeys')
+          .doc(journeyId)
+          .update({
+        'currentLatitude': latitude,
+        'currentLongitude': longitude,
+      });
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<List<JourneyModel>> getJourneys() async {

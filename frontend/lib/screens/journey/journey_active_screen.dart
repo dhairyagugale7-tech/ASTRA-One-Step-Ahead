@@ -12,6 +12,8 @@ import 'package:geolocator/geolocator.dart';
 import '../../services/location_service.dart';
 import '../../models/journey_model.dart';
 
+import 'dart:async';
+
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../services/route_service.dart';
@@ -19,10 +21,12 @@ import '../../services/route_service.dart';
 class JourneyActiveScreen extends StatefulWidget {
 
   final JourneyModel journey;
+  final String journeyId;
 
   const JourneyActiveScreen({
     super.key,
     required this.journey,
+    required this.journeyId
   });
 
   @override
@@ -33,6 +37,10 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
   GoogleMapController? mapController;
 
   final LocationService locationService = LocationService();
+
+  final JourneyService journeyService = JourneyService();
+
+  StreamSubscription<Position>? positionSubscription;
 
   final RouteService routeService = RouteService();
 
@@ -153,9 +161,111 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
 
   }
 
+  Future<void> updateRoute(Position position) async {
+    try {
+      final route = await routeService.getRoute(
+        originLat: position.latitude,
+        originLng: position.longitude,
+        destinationLat: widget.journey.destinationLatitude,
+        destinationLng: widget.journey.destinationLongitude,
+      );
+
+      if (route == null) {
+        return;
+      }
+
+      final points = route["points"] as List<PointLatLng>;
+      final duration = route["duration"] as String;
+      final routeDistance = route["distance"] as String;
+
+      print("REROUTING...");
+      print("New ETA: $duration");
+      print("New Distance: $routeDistance");
+      print("New Route points: ${points.length}");
+
+      setState(() {
+        eta = duration;
+        distance = routeDistance;
+
+        polylines = {
+          Polyline(
+            polylineId: const PolylineId("route"),
+            width: 6,
+            points: points
+                .map(
+                  (point) => LatLng(
+                    point.latitude,
+                    point.longitude,
+                  ),
+                )
+                .toList(),
+          ),
+        };
+      });
+
+      await _fitCameraToRoute(
+        points
+            .map(
+              (point) => LatLng(
+                point.latitude,
+                point.longitude,
+              ),
+            )
+            .toList(),
+      );
+    } catch (e) {
+      print("Rerouting error: $e");
+    }
+  }
+
+  Future<void> _fitCameraToRoute(List<LatLng> routePoints) async {
+    if (mapController == null || routePoints.isEmpty) return;
+
+    double minLat = routePoints.first.latitude;
+    double maxLat = routePoints.first.latitude;
+    double minLng = routePoints.first.longitude;
+    double maxLng = routePoints.first.longitude;
+
+    for (final point in routePoints) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+
+    await mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        bounds,
+        80,
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+
+    positionSubscription =
+        locationService.getLocationStream().listen((Position position) async {
+      currentPosition = position;
+
+      await journeyService.updateLiveLocation(
+        journeyId: widget.journeyId,
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+
+      print(
+        "LIVE GPS: ${currentPosition!.latitude}, ${currentPosition!.longitude}",
+      );
+
+      updateRoute(position);
+    });
   }
 
   @override

@@ -225,7 +225,7 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
         startedAt: Timestamp.now(),
       );
 
-      await journeyService.startJourney(journey);
+      final journeyId = await journeyService.startJourney(journey);
 
       if (!mounted) return;
 
@@ -236,7 +236,7 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => JourneyActiveScreen(journey: journey,),
+          builder: (context) => JourneyActiveScreen(journey: journey, journeyId: journeyId),
         ),
       );
 
@@ -247,6 +247,7 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
     }
 
   }
+
 
   @override
   Widget build(BuildContext context) {

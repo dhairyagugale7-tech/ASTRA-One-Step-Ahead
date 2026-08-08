@@ -16,6 +16,11 @@ class PlaceService {
 
     final response = await http.get(url);
 
+    print("PLACE STATUS: ${response.statusCode}");
+    print("PLACE RESPONSE: ${response.body}");
+
+
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data["predictions"];
@@ -34,6 +39,9 @@ class PlaceService {
     );
 
     final response = await http.get(url);
+
+    print("PLACE STATUS: ${response.statusCode}");
+    print("PLACE RESPONSE: ${response.body}");
 
     print(response.body);
 
