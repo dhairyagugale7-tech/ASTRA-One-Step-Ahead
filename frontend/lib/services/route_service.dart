@@ -4,9 +4,10 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 
 class RouteService {
-  static const String apiKey = "REMOVED_GOOGLE_MAPS_API_KEY";
+  static const String apiKey =
+      "REMOVED_GOOGLE_MAPS_API_KEY";
 
-  Future<List<PointLatLng>> getRoute({
+  Future<Map<String, dynamic>?> getRoute({
     required double originLat,
     required double originLng,
     required double destinationLat,
@@ -24,20 +25,31 @@ class RouteService {
     print(response.body);
 
     if (response.statusCode != 200) {
-      return [];
+      return null;
     }
 
     final data = jsonDecode(response.body);
 
     if (data["routes"].isEmpty) {
-      return [];
+      return null;
     }
 
-    final encoded =
-        data["routes"][0]["overview_polyline"]["points"];
+    final route = data["routes"][0];
+
+    final encoded = route["overview_polyline"]["points"];
+
+    final duration = route["legs"][0]["duration"]["text"];
+
+    final distance = route["legs"][0]["distance"]["text"];
 
     PolylinePoints polylinePoints = PolylinePoints();
 
-    return polylinePoints.decodePolyline(encoded);
+    final points = polylinePoints.decodePolyline(encoded);
+
+    return {
+      "points": points,
+      "duration": duration,
+      "distance": distance,
+    };
   }
 }

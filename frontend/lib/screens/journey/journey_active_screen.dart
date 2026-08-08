@@ -47,7 +47,9 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
     zoom: 14,
   );
   // Temporary values
-  final String eta = '18 mins';
+  String eta = 'Calculating...';
+
+  String distance = 'Calculating...';
 
   final int aiScore = 92;
 
@@ -109,13 +111,28 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
         destinationLng: widget.journey.destinationLongitude,
       );
 
-      print(route.length);
+      if (route == null) {
+        return;
+      }
+
+      final points = route["points"] as List<PointLatLng>;
+      final duration = route["duration"] as String;
+      final routedistance = route["distance"] as String;
+
+      print("ETA: $duration");
+      print("Distance: $routedistance");
+      print("Route points: ${points.length}");
+
+      setState(() {
+        eta = duration;
+        distance = routedistance;
+      });
 
       polylines.add(
         Polyline(
           polylineId: const PolylineId("route"),
           width: 6,
-          points: route
+          points: points
               .map(
                 (point) => LatLng(
                   point.latitude,
@@ -184,7 +201,7 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
                             polylines: polylines,
                             myLocationEnabled: true,
                             myLocationButtonEnabled: true,
-                            zoomControlsEnabled: false,
+                            zoomControlsEnabled: true,
                             onMapCreated: (GoogleMapController controller) {
                               mapController = controller;
                               getCurrentLocation();
@@ -199,6 +216,22 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
                           child: Center(
                             child: Text(
                               'ETA : $eta',
+                              style: const TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        GlassCard(
+                          child: Center(
+                            child: Text(
+                              'Distance : $distance',
                               style: const TextStyle(
                                 fontFamily: 'PlusJakartaSans',
                                 fontSize: 24,
