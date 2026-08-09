@@ -18,6 +18,13 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../services/route_service.dart';
 
+import '../../services/whatsapp_service.dart';
+
+import '../../services/guardian_service.dart';
+
+import 'package:url_launcher/url_launcher.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 class JourneyActiveScreen extends StatefulWidget {
 
   final JourneyModel journey;
@@ -39,6 +46,8 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
   final LocationService locationService = LocationService();
 
   final JourneyService journeyService = JourneyService();
+
+  final GuardianService guardianService = GuardianService();
 
   StreamSubscription<Position>? positionSubscription;
 
@@ -218,6 +227,34 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
     }
   }
 
+  Future<void> shareJourneyWithGuardians() async {
+    try {
+      for (final guardianName in widget.journey.guardians) {
+        final guardian =
+            await guardianService.getGuardianByName(guardianName);
+
+        if (guardian == null) {
+          debugPrint(
+            'Guardian not found: $guardianName',
+          );
+          continue;
+        }
+
+        final trackingLink =
+          'https://astra-one-step-ahead.web.app/?uid=${FirebaseAuth.instance.currentUser!.uid}&journeyId=${widget.journeyId}';
+
+        await WhatsAppService.sendGuardianJourneyMessage(
+          phone: guardian.phone,
+          trackingLink: trackingLink,
+        );
+      }
+    } catch (e) {
+      debugPrint(
+        'Guardian WhatsApp sharing error: $e',
+      );
+    }
+  }
+
   Future<void> _fitCameraToRoute(List<LatLng> routePoints) async {
     if (mapController == null || routePoints.isEmpty) return;
 
@@ -265,6 +302,10 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
       );
 
       updateRoute(position);
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      shareJourneyWithGuardians();
     });
   }
 
@@ -396,6 +437,26 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
                             ],
                           ),
                         ),
+
+                      const SizedBox(height: 25),
+
+                      ElevatedButton(
+                        onPressed: () async {
+                          final Uri whatsappUrl = Uri.parse(
+                            'https://wa.me/919527626928?text=Hello%20from%20ASTRA',
+                          );
+
+                          try {
+                            await launchUrl(
+                              whatsappUrl,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          } catch (e) {
+                            debugPrint('WhatsApp launch error: $e');
+                          }
+                        },
+                        child: const Text('Test WhatsApp'),
+                      ),
 
                       const SizedBox(height: 25),
 

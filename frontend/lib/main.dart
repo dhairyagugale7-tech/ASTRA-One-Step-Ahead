@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:frontend/screens/auth/login_screen.dart';
+import 'package:frontend/screens/journey/journey_active_screen.dart';
 
 import 'firebase_options.dart';
 import 'config/app_theme.dart';
@@ -7,6 +9,7 @@ import 'config/app_theme.dart';
 import 'screens/journey/journey_setup_screen.dart';
 import 'screens/splash/splash_screen.dart';
 import 'screens/journey/journey_setup_screen.dart';
+import 'screens/journey/journey_active_screen.dart';
 
 
 

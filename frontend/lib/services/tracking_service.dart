@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TrackingService {
   static const String trackingBaseUrl =
@@ -40,5 +41,38 @@ class TrackingService {
         text: 'Track my live location with ASTRA:\n$trackingUrl',
       ),
     );
+  }
+
+  static Future<void> openWhatsApp({
+    required String phoneNumber,
+    required String journeyId,
+  }) async {
+    final trackingUrl = generateCurrentUserTrackingUrl(
+      journeyId: journeyId,
+    );
+
+    final message = '''
+  🌙 ASTRA Guardian Journey
+
+  A Guardian Journey has started.
+
+  📍 Track live location:
+  $trackingUrl
+
+  Please keep an eye on the journey.
+  ''';
+
+    final whatsappUrl = Uri.parse(
+      'https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}',
+    );
+
+    if (await canLaunchUrl(whatsappUrl)) {
+      await launchUrl(
+        whatsappUrl,
+        mode: LaunchMode.externalApplication,
+      );
+    } else {
+      throw Exception('Could not open WhatsApp.');
+    }
   }
 }

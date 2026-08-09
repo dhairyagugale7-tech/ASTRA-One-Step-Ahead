@@ -57,4 +57,16 @@ class GuardianService {
         .doc(guardianId)
         .delete();
   }
+
+  Future<GuardianModel?> getGuardianByName(String name) async {
+    final guardians = await getGuardians();
+
+    for (final guardian in guardians) {
+      if (guardian.name == name) {
+        return guardian;
+      }
+    }
+
+    return null;
+  }
 }
