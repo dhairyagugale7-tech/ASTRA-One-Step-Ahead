@@ -15,6 +15,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/location_service.dart';
 import '../../services/place_service.dart';
 
+import '../../services/tracking_service.dart';
+
 class JourneySetupScreen extends StatefulWidget {
   const JourneySetupScreen({super.key});
 
@@ -226,6 +228,12 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
       );
 
       final journeyId = await journeyService.startJourney(journey);
+
+      TrackingService.shareTrackingUrl(
+        journeyId: journeyId,
+      ).catchError((error) {
+        debugPrint('Tracking link sharing failed: $error');
+      });
 
       if (!mounted) return;
 
