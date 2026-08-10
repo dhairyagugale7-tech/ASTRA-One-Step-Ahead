@@ -67,4 +67,24 @@ class JourneyService {
     }).toList();
 
   }
+
+  Future<void> endJourney({
+    required String journeyId,
+  }) async {
+    try {
+      final uid = _auth.currentUser!.uid;
+
+      await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('journeys')
+          .doc(journeyId)
+          .update({
+        'isActive': false,
+        'completedAt': Timestamp.now(),
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:frontend/screens/auth/location_permission_screen.dart';
 import 'package:frontend/screens/auth/login_screen.dart';
+import 'package:frontend/screens/guardian/add_guardian_screen.dart';
 import 'package:frontend/screens/journey/journey_active_screen.dart';
 
 import 'firebase_options.dart';
@@ -33,7 +35,7 @@ class AstraApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'ASTRA',
       theme: AppTheme.darkTheme,
-      home: JourneySetupScreen(),
+      home: SplashScreen(),
     );
   }
 }

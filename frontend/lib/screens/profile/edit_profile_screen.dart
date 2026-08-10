@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../widgets/custom_text_field.dart';
@@ -5,6 +6,9 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/nightsky.dart';
 import '../../widgets/primary_button.dart';
 import '../../config/colors.dart';
+import '../home/home_screen.dart';
+import '../../services/auth_service.dart';
+import '../../services/firestore_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -16,16 +20,94 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
 
   final TextEditingController nameController =
-      TextEditingController(text: 'Dhairya Gugale');
+      TextEditingController();
 
   final TextEditingController phoneController =
-      TextEditingController(text: '+91 9876543210');
+      TextEditingController();
 
   final TextEditingController emailController =
-      TextEditingController(text: 'dhairya@gmail.com');
+      TextEditingController();
 
   final TextEditingController passwordController =
-      TextEditingController(text: 'password123');
+      TextEditingController();
+
+  final AuthService authService = AuthService();
+
+  final FirestoreService firestoreService = FirestoreService();
+
+  bool isLoading = false;
+
+  Future<void> loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      showMessage('User not logged in.');
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final userData =
+          await firestoreService.getUserData(user.uid);
+
+      if (userData != null) {
+        nameController.text = userData['name'] ?? '';
+        phoneController.text = userData['phone'] ?? '';
+        emailController.text = userData['email'] ?? '';
+      }
+    } catch (e) {
+      showMessage('Could not load profile.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadUserData();
+  }
+
+  void showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
+    );
+  }
+
+  bool validateInputs() {
+
+    if (nameController.text.trim().isEmpty) {
+      showMessage("Please enter name.");
+      return false;
+    }
+
+    if (phoneController.text.trim().isEmpty) {
+      showMessage("Please enter phone number.");
+      return false;
+    }
+
+    if (phoneController.text.trim().length != 10) {
+      showMessage("Phone number must be 10 digits.");
+      return false;
+    }
+
+    if (emailController.text.trim().isEmpty ||
+        !emailController.text.contains("@")) {
+      showMessage("Please enter a valid email address.");
+      return false;
+    }
+
+    return true;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,17 +165,49 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                             const SizedBox(height: 20),
 
-                            CustomTextField(
-                              controller: passwordController,
-                              obscureText: true,
-                            ),
-
-                            const SizedBox(height: 28),
-
                             PrimaryButton(
-                              text: 'Edit Profile',
+                              text: isLoading ? "..." : "Edit Profile",
                               width: 220,
-                              onPressed: () {},
+                              onPressed: () async {
+                                if (!validateInputs()) {
+                                  return;
+                                }
+
+                                final user = FirebaseAuth.instance.currentUser;
+
+                                if (user == null) {
+                                  showMessage('User not logged in.');
+                                  return;
+                                }
+
+                                setState(() {
+                                  isLoading = true;
+                                });
+
+                                try {
+                                  await firestoreService.updateUserData(
+                                    uid: user.uid,
+                                    name: nameController.text.trim(),
+                                    phone: phoneController.text.trim(),
+                                    email: emailController.text.trim(),
+                                  );
+
+                                  if (!mounted) return;
+
+                                  showMessage('Profile updated successfully! 💗');
+
+                                  Navigator.pop(context);
+
+                                } catch (e) {
+                                  showMessage('Failed to update profile.');
+                                } finally {
+                                  if (mounted) {
+                                    setState(() {
+                                      isLoading = false;
+                                    });
+                                  }
+                                }
+                              },
                             ),
 
                           ],
@@ -120,6 +234,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 Icons.arrow_back_ios_new,
                 color: Colors.white,
                 size: 32,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 20,
+            right : 20,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                      (route) => false,
+                    );
+              },
+              child: const Icon(
+                Icons.home_rounded,
+                color: Colors.white,
+                size: 42,
               ),
             ),
           ),

@@ -128,33 +128,30 @@ class GuardianSetupScreen extends StatelessWidget {
           ),
           Positioned(
             bottom: 20,
-            right: 20,
-            child: GestureDetector(
-              onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProfileScreen(),
-                    ),
-                  );
-              },
-              child: const CircleAvatar(
-                radius: 24,
-                backgroundColor: Color(0xFF8EB6D8),
-                child: Icon(
-                  Icons.person,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-
-          Positioned(
-            bottom: 20,
             left: 20,
             child: GestureDetector(
               onTap: () {
                 Navigator.pop(context);
+              },
+              child: const Icon(
+                Icons.arrow_back_ios_new,
+                color: Colors.white,
+                size: 32,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 20,
+            right : 20,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                      (route) => false,
+                    );
               },
               child: const Icon(
                 Icons.home_rounded,

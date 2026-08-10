@@ -11,6 +11,7 @@ import '../../services/guardian_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../models/guardian_model.dart';
+import '../home/home_screen.dart';
 
 class AddGuardianScreen extends StatefulWidget {
   const AddGuardianScreen({super.key});
@@ -277,6 +278,26 @@ class _AddGuardianScreenState extends State<AddGuardianScreen> {
                 Icons.arrow_back_ios_new,
                 color: Colors.white,
                 size: 32,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 20,
+            right : 20,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                      (route) => false,
+                    );
+              },
+              child: const Icon(
+                Icons.home_rounded,
+                color: Colors.white,
+                size: 42,
               ),
             ),
           ),

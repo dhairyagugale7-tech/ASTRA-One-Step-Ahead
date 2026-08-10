@@ -184,7 +184,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     const SizedBox(height: 20),
 
                     PrimaryButton(
-                      text: isLoading ? "Creating Account..." : "Create Account",
+                      text: isLoading ? "..." : "Create Account",
                       onPressed: isLoading
                       ? null 
                       : ()async {

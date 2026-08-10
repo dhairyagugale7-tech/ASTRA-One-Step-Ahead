@@ -4,14 +4,55 @@ import '../../config/colors.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/nightsky.dart';
 import '../../widgets/primary_button.dart';
+import '../home/home_screen.dart';
+import '../../services/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/guardian_service.dart';
 
-class JourneyCompletedScreen extends StatelessWidget {
+class JourneyCompletedScreen extends StatefulWidget {
   const JourneyCompletedScreen({super.key});
 
-  // Temporary values
-  // Later these will come from Firebase.
+  @override
+  State<JourneyCompletedScreen> createState() => _JourneyCompletedScreenState();
+}
 
-  final String guardianMessage = 'Mom has been notified.';
+class _JourneyCompletedScreenState extends State<JourneyCompletedScreen> {
+  // Temporary values
+  // Primary guardian name
+  String primaryGuardianName = '';
+
+  String get guardianMessage {
+    if (primaryGuardianName.isEmpty) {
+      return 'Your primary guardian has been notified.';
+    }
+
+    return '$primaryGuardianName has been notified.';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadPrimaryGuardian();
+  }
+
+
+  Future<void> loadPrimaryGuardian() async {
+  try {
+    final guardians = await GuardianService().getGuardians();
+
+    final primaryGuardian = guardians.firstWhere(
+      (guardian) => guardian.isPrimary == true,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      primaryGuardianName = primaryGuardian.name;
+    });
+  } catch (e) {
+    debugPrint('Error loading primary guardian: $e');
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +156,14 @@ class JourneyCompletedScreen extends StatelessWidget {
                       PrimaryButton(
                         text: 'Return Home',
                         width: 220,
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const HomeScreen(),
+                            ),
+                          );
+                        },
                       ),
 
                       const SizedBox(height: 100),

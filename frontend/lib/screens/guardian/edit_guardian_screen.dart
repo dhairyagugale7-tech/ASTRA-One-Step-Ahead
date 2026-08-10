@@ -11,6 +11,7 @@ import '../../services/guardian_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'guardian_management_screen.dart';
+import '../home/home_screen.dart';
 
 class EditGuardianScreen extends StatefulWidget {
   final GuardianModel guardian;
@@ -382,6 +383,26 @@ class _EditGuardianScreenState extends State<EditGuardianScreen> {
                 Icons.arrow_back_ios_new,
                 color: Colors.white,
                 size: 32,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 20,
+            right : 20,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                      (route) => false,
+                    );
+              },
+              child: const Icon(
+                Icons.home_rounded,
+                color: Colors.white,
+                size: 42,
               ),
             ),
           ),

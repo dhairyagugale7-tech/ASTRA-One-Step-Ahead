@@ -25,4 +25,20 @@ class FirestoreService {
     return document.data();
 
   }
+
+  Future<void> updateUserData({
+    required String uid,
+    required String name,
+    required String phone,
+    required String email,
+  }) async{
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .update({
+          'name': name,
+          'phone': phone,
+          'email': email,
+        });
+  }
 }

@@ -7,14 +7,55 @@ class GuardianService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Future<void> addGuardian(GuardianModel guardian) async {
+  Future addGuardian(GuardianModel guardian) async {
     final String uid = _auth.currentUser!.uid;
 
-    await _firestore
+    final guardiansRef = _firestore
         .collection('users')
         .doc(uid)
-        .collection('guardians')
-        .add(guardian.toMap());
+        .collection('guardians');
+
+    // If this guardian is being made primary,
+    // remove primary status from the existing primary guardian.
+    if (guardian.isPrimary) {
+      final snapshot = await guardiansRef
+          .where('isPrimary', isEqualTo: true)
+          .get();
+
+      for (final doc in snapshot.docs) {
+        await doc.reference.update({
+          'isPrimary': false,
+        });
+      }
+    }
+
+    // Add the new guardian.
+    await guardiansRef.add(guardian.toMap());
+  }
+
+  Future<void> setPrimaryGuardian(String guardianId) async {
+    final String uid = _auth.currentUser!.uid;
+
+    final guardiansRef = _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('guardians');
+
+    // Remove primary status from all guardians.
+    final snapshot = await guardiansRef
+        .where('isPrimary', isEqualTo: true)
+        .get();
+
+    for (final doc in snapshot.docs) {
+      await doc.reference.update({
+        'isPrimary': false,
+      });
+    }
+
+    // Make the selected guardian primary.
+    await guardiansRef.doc(guardianId).update({
+      'isPrimary': true,
+    });
   }
 
   Future<List<GuardianModel>> getGuardians() async {

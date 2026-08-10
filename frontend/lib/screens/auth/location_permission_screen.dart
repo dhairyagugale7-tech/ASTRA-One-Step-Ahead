@@ -144,6 +144,20 @@ class LocationPermissionScreen extends StatelessWidget {
               ),
             ),
           ),
+          Positioned(
+            bottom: 20,
+            left: 20,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+              },
+              child: const Icon(
+                Icons.arrow_back_ios_new,
+                color: Colors.white,
+                size: 32,
+              ),
+            ),
+          ),
         ],
       ),
     );

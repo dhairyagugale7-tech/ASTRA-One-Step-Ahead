@@ -1,4 +1,6 @@
 import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart';
 
 class LocationService {
   Future<Position> getCurrentLocation() async {
@@ -24,6 +26,13 @@ class LocationService {
       throw Exception(
         'Location permission permanently denied.',
       );
+    }
+
+    // Request background location permission
+    final backgroundStatus = await Permission.locationAlways.request();
+
+    if (!backgroundStatus.isGranted) {
+      debugPrint('Background location permission not granted.');
     }
 
     // Get current location

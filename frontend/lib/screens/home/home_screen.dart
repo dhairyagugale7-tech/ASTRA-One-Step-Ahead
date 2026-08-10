@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/guardian/guardian_management_screen.dart';
 
 import '../../config/colors.dart';
 import '../../widgets/nightsky.dart';
@@ -8,13 +9,62 @@ import '../../widgets/sos_button.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../journey/journey_setup_screen.dart';
 
-class HomeScreen extends StatelessWidget {
-  final int safetyScore = 100;
-  final String safetyMessage = 'Safe to Travel...!';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import '../../services/firestore_service.dart';
+
+class HomeScreen extends StatefulWidget {
+
   const HomeScreen({super.key});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final int safetyScore = 100;
+
+  final String safetyMessage = 'Safe to Travel...!';
+
+  String userName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    loadUserName();
+  }
+
+  Future<void> loadUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return;
+
+    final userData =
+        await FirestoreService().getUserData(user.uid);
+
+    if (!mounted) return;
+
+    setState(() {
+      userName = userData?['name'] ?? '';
+    });
+  }
+
+
+  @override
   Widget build(BuildContext context) {
+    String getGreeting() {
+      final hour = DateTime.now().hour;
+
+      if (hour >= 5 && hour < 12) {
+        return 'Good Morning';
+      } else if (hour >= 12 && hour < 17) {
+        return 'Good Afternoon';
+      } else if (hour >= 17 && hour < 21) {
+        return 'Good Evening';
+      } else {
+        return 'Hello';
+      }
+    }
     return Scaffold(
       body: Stack(
         children: [
@@ -33,8 +83,10 @@ class HomeScreen extends StatelessWidget {
 
                       const SizedBox(height: 110),
 
-                      const Text(
-                        'Good Evening, User!',
+                      Text(
+                        userName.isEmpty
+                            ? '${getGreeting()}!'
+                            : '${getGreeting()}, $userName!',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'PlayfairDisplay',
@@ -163,7 +215,12 @@ class HomeScreen extends StatelessWidget {
 
                       GestureDetector(
                         onTap: () {
-                          // Navigate to Guardian Management Screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => GuardianManagementScreen(),
+                            ),
+                          );
                         },
                         child: Container(
                           width: 150,
@@ -220,21 +277,6 @@ class HomeScreen extends StatelessWidget {
                   color: Colors.white,
                   size: 28,
                 ),
-              ),
-            ),
-          ),
-
-          Positioned(
-            bottom: 20,
-            left: 20,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-              },
-              child: const Icon(
-                Icons.arrow_back_ios_new,
-                color: Colors.white,
-                size: 32,
               ),
             ),
           ),

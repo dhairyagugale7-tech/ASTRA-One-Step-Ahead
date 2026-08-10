@@ -17,6 +17,8 @@ import '../../services/place_service.dart';
 
 import '../../services/tracking_service.dart';
 
+import '../../services/guardian_service.dart';
+import '../home/home_screen.dart';
 class JourneySetupScreen extends StatefulWidget {
   const JourneySetupScreen({super.key});
 
@@ -28,7 +30,7 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
 
   final JourneyService journeyService = JourneyService();
   final LocationService locationService = LocationService();
-
+  final GuardianService guardianService = GuardianService();
   final PlaceService placeService = PlaceService();
 
   List<dynamic> placeSuggestions = [];
@@ -56,6 +58,23 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
     );
   }
 
+  Future<void> loadPrimaryGuardian() async {
+    try {
+      final guardians = await guardianService.getGuardians();
+
+      final primaryGuardians =
+          guardians.where((guardian) => guardian.isPrimary).toList();
+
+      if (primaryGuardians.isNotEmpty) {
+        setState(() {
+          selectedGuardians = [primaryGuardians.first.name];
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading primary guardian: $e");
+    }
+  }
+
   bool validateInputs() {
 
     if (destinationController.text.trim().isEmpty) {
@@ -70,6 +89,11 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
 
     if (selectedPlace == null) {
       showMessage("Please select a destination from the suggestions.");
+      return false;
+    }
+
+    if (selectedGuardians.isEmpty) {
+      showMessage("Please select at least one guardian.");
       return false;
     }
 
@@ -150,6 +174,8 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
 
     WidgetsBinding.instance.addObserver(this);
 
+    loadPrimaryGuardian();
+
     destinationController.addListener(() async {
 
       if (isSelectingPlace) return;
@@ -228,12 +254,6 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
       );
 
       final journeyId = await journeyService.startJourney(journey);
-
-      TrackingService.shareTrackingUrl(
-        journeyId: journeyId,
-      ).catchError((error) {
-        debugPrint('Tracking link sharing failed: $error');
-      });
 
       if (!mounted) return;
 
@@ -540,28 +560,29 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
                 Navigator.pop(context);
               },
               child: const Icon(
-                Icons.home_rounded,
+                Icons.arrow_back_ios_new,
                 color: Colors.white,
-                size: 42,
+                size: 32,
               ),
             ),
           ),
-
           Positioned(
             bottom: 20,
-            right: 20,
+            right : 20,
             child: GestureDetector(
               onTap: () {
-                // Navigate to Profile Screen
+                Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                      (route) => false,
+                    );
               },
-              child: const CircleAvatar(
-                radius: 24,
-                backgroundColor: Color(0xFF8EB6D8),
-                child: Icon(
-                  Icons.person,
-                  color: Colors.white,
-                  size: 28,
-                ),
+              child: const Icon(
+                Icons.home_rounded,
+                color: Colors.white,
+                size: 42,
               ),
             ),
           ),

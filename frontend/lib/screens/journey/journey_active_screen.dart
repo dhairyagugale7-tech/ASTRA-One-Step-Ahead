@@ -25,6 +25,9 @@ import '../../services/guardian_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../journey/journey_completed_screen.dart';
+import '../home/home_screen.dart';
+
 class JourneyActiveScreen extends StatefulWidget {
 
   final JourneyModel journey;
@@ -245,6 +248,8 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
 
         await WhatsAppService.sendGuardianJourneyMessage(
           phone: guardian.phone,
+          guardianName: guardian.name,
+          destination: widget.journey.destination,
           trackingLink: trackingLink,
         );
       }
@@ -307,6 +312,151 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       shareJourneyWithGuardians();
     });
+  }
+
+  @override
+  void dispose() {
+    positionSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> stopJourneyTracking() async {
+    await positionSubscription?.cancel();
+    positionSubscription = null;
+
+    debugPrint('🛑 Journey GPS tracking stopped.');
+  }
+
+  Future<void> completeJourney() async {
+    try {
+      // Stop live GPS tracking first
+      await stopJourneyTracking();
+
+      // Make sure we have the user's final location
+      if (currentPosition == null) {
+        throw Exception('Current location is not available.');
+      }
+
+      // Send journey completed message with final location
+      final finalLocationLink =
+          'https://www.google.com/maps/search/?api=1&query='
+          '${currentPosition!.latitude},${currentPosition!.longitude}';
+
+      for (final guardianName in widget.journey.guardians) {
+        try {
+          final guardian =
+              await guardianService.getGuardianByName(guardianName);
+
+          if (guardian == null) {
+            debugPrint('Guardian not found: $guardianName');
+            continue;
+          }
+
+          await WhatsAppService.sendJourneyCompletedMessage(
+            phone: guardian.phone,
+            guardianName: guardian.name,
+            destination: widget.journey.destination,
+            latitude: currentPosition!.latitude,
+            longitude: currentPosition!.longitude,
+          );
+
+          debugPrint(
+            '✅ Journey completed message sent to ${guardian.name}',
+          );
+        } catch (e) {
+          debugPrint(
+            '❌ Completion WhatsApp failed for $guardianName: $e',
+          );
+        }
+      }
+
+      // Mark journey as completed in Firestore
+      await journeyService.endJourney(
+        journeyId: widget.journeyId,
+      );
+
+      debugPrint('✅ Journey completed successfully.');
+    } catch (e) {
+      debugPrint('❌ Error completing journey: $e');
+    }
+  }
+
+  Future<void> _confirmCompleteJourney({
+    required VoidCallback onConfirmed,
+  }) async {
+    final bool? shouldComplete = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF211B3A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Complete Journey?',
+            style: TextStyle(
+              fontFamily: 'PlayfairDisplay',
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: const Text(
+            'Are you sure you want to complete your journey?\n\n'
+            'Live location tracking will stop and your guardians will be notified.',
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              color: Colors.white70,
+              fontSize: 15,
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontFamily: 'PlusJakartaSans',
+                ),
+              ),
+            ),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF8F7BFF),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Complete Journey',
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldComplete == true) {
+      await completeJourney();
+
+      if (!mounted) return;
+
+      onConfirmed();
+    }
   }
 
   @override
@@ -440,31 +590,22 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
 
                       const SizedBox(height: 25),
 
-                      ElevatedButton(
-                        onPressed: () async {
-                          final Uri whatsappUrl = Uri.parse(
-                            'https://wa.me/919527626928?text=Hello%20from%20ASTRA',
-                          );
-
-                          try {
-                            await launchUrl(
-                              whatsappUrl,
-                              mode: LaunchMode.externalApplication,
-                            );
-                          } catch (e) {
-                            debugPrint('WhatsApp launch error: $e');
-                          }
-                        },
-                        child: const Text('Test WhatsApp'),
-                      ),
-
-                      const SizedBox(height: 25),
-
                       PrimaryButton(
                         text: 'Journey Completed',
                         width: 220,
-                        onPressed: () {},
                         fontSize: 18,
+                        onPressed: () async {
+                          await completeJourney();
+
+                          if (!mounted) return;
+
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const JourneyCompletedScreen(),
+                            ),
+                          );
+                        },
                       ),
 
                       const SizedBox(height: 30),
@@ -485,7 +626,11 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
             left: 20,
             child: GestureDetector(
               onTap: () {
-                Navigator.pop(context);
+                _confirmCompleteJourney(
+                  onConfirmed: () {
+                    Navigator.pop(context);
+                  },
+                );
               },
               child: const Icon(
                 Icons.arrow_back_ios_new,
@@ -494,21 +639,27 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
               ),
             ),
           ),
-
           Positioned(
             bottom: 20,
-            right: 20,
+            right : 20,
             child: GestureDetector(
               onTap: () {
-                // Navigate to Profile
+                _confirmCompleteJourney(
+                  onConfirmed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                      (route) => false,
+                    );
+                  },
+                );
               },
-              child: const CircleAvatar(
-                radius: 24,
-                backgroundColor: Color(0xFF8EB6D8),
-                child: Icon(
-                  Icons.person,
-                  color: Colors.white,
-                ),
+              child: const Icon(
+                Icons.home_rounded,
+                color: Colors.white,
+                size: 42,
               ),
             ),
           ),

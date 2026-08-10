@@ -7,7 +7,7 @@ import '../../widgets/primary_button.dart';
 import '../../services/guardian_service.dart';
 import '../../models/guardian_model.dart';
 import '../guardian/guardian_management_screen.dart';
-
+import '../home/home_screen.dart';
 class GuardianSelectionScreen extends StatefulWidget {
   const GuardianSelectionScreen({super.key});
 
@@ -43,23 +43,38 @@ class _GuardianSelectionScreenState extends State<GuardianSelectionScreen> {
     });
   }
 
-  void toggleGuardianSelection(GuardianModel guardian) {
+  Future<void> selectPrimaryGuardian(GuardianModel guardian) async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
 
-  setState(() {
+      await guardianService.setPrimaryGuardian(guardian.id);
 
-    if (selectedGuardians.contains(guardian)) {
+      // Reload guardians so the UI reflects the new primary guardian.
+      await loadGuardians();
 
-      selectedGuardians.remove(guardian);
+      if (!mounted) return;
 
-    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${guardian.name} is now your primary guardian.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
 
-      selectedGuardians.add(guardian);
-
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not change primary guardian.',
+          ),
+        ),
+      );
     }
-
-  });
-
-}
+  }
 
   @override
   void initState() {
@@ -126,30 +141,14 @@ class _GuardianSelectionScreenState extends State<GuardianSelectionScreen> {
                                   ? "Unselect"
                                   : "Select",
                                 onPressed: () {
-                                  toggleGuardianSelection(guardian);
+                                  if (!selectedGuardians.contains(guardian)) {
+                                    selectPrimaryGuardian(guardian);
+                                  }
                                 },
                               ),
                             );
                           }).toList(),
                         ),
-
-                      const SizedBox(height: 20),
-
-                      Center(
-                        child: PrimaryButton(
-                          text: 'Manage Guardians',
-                          width: 190,
-                          fontSize: 18,
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const GuardianManagementScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
 
                       const SizedBox(height: 20),       
 
@@ -169,6 +168,25 @@ class _GuardianSelectionScreenState extends State<GuardianSelectionScreen> {
                           },
                         ),
                       ),
+
+                      const SizedBox(height: 20),
+
+                      Center(
+                        child: PrimaryButton(
+                          text: 'Manage Guardians',
+                          width: 190,
+                          fontSize: 18,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const GuardianManagementScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      
                     ],
                   ),
                 ),
@@ -190,21 +208,23 @@ class _GuardianSelectionScreenState extends State<GuardianSelectionScreen> {
               ),
             ),
           ),
-
           Positioned(
             bottom: 20,
-            right: 20,
+            right : 20,
             child: GestureDetector(
               onTap: () {
-                // Navigate to Profile
+                Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                      (route) => false,
+                    );
               },
-              child: const CircleAvatar(
-                radius: 24,
-                backgroundColor: Color(0xFF8EB6D8),
-                child: Icon(
-                  Icons.person,
-                  color: Colors.white,
-                ),
+              child: const Icon(
+                Icons.home_rounded,
+                color: Colors.white,
+                size: 42,
               ),
             ),
           ),

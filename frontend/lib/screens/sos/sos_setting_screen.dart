@@ -4,6 +4,7 @@ import '../../config/colors.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/nightsky.dart';
 import '../../widgets/primary_button.dart';
+import '../home/home_screen.dart';
 
 class SosSettingsScreen extends StatefulWidget {
   const SosSettingsScreen({super.key});
@@ -273,27 +274,29 @@ class _SosSettingsScreenState extends State<SosSettingsScreen> {
                 Navigator.pop(context);
               },
               child: const Icon(
-                Icons.home_rounded,
+                Icons.arrow_back_ios_new,
                 color: Colors.white,
-                size: 42,
+                size: 32,
               ),
             ),
           ),
-
           Positioned(
             bottom: 20,
-            right: 20,
+            right : 20,
             child: GestureDetector(
               onTap: () {
-                // Navigate to Profile
+                Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                      (route) => false,
+                    );
               },
-              child: const CircleAvatar(
-                radius: 24,
-                backgroundColor: Color(0xFF8EB6D8),
-                child: Icon(
-                  Icons.person,
-                  color: Colors.white,
-                ),
+              child: const Icon(
+                Icons.home_rounded,
+                color: Colors.white,
+                size: 42,
               ),
             ),
           ),

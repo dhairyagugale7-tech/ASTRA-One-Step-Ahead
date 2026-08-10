@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/guardian/guardian_management_screen.dart';
+import 'package:frontend/screens/profile/edit_profile_screen.dart';
+import 'package:frontend/screens/sos/sos_setting_screen.dart';
 
 import '../../config/colors.dart';
 import '../../widgets/glass_card.dart';
@@ -128,7 +131,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         text: 'Manage Guardians',
                         width: 300,
                         onPressed: () {
-                          // Navigate to Guardian Management
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const GuardianManagementScreen(),
+                            ),
+                          );
                         },
                       ),
 
@@ -138,7 +146,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         text: 'Edit Profile',
                         width: 220,
                         onPressed: () {
-                          // Navigate to Edit Profile
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const EditProfileScreen(),
+                            ),
+                          );
                         },
                       ),
 
@@ -148,7 +161,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         text: 'SOS Settings',
                         width: 220,
                         onPressed: () {
-                          // Navigate to SOS Settings
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SosSettingsScreen(),
+                            ),
+                          );
                         },
                       ),
 
@@ -258,12 +276,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             right : 20,
             child: GestureDetector(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const HomeScreen(),
-                  ),
-                );
+                Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                      (route) => false,
+                    );
               },
               child: const Icon(
                 Icons.home_rounded,
