@@ -5,19 +5,22 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/nightsky.dart';
 import '../../widgets/primary_button.dart';
 
-class SosActiveScreen extends StatelessWidget {
+class SosActiveScreen extends StatefulWidget {
   const SosActiveScreen({super.key});
 
+  @override
+  State<SosActiveScreen> createState() => _SosActiveScreenState();
+}
+
+class _SosActiveScreenState extends State<SosActiveScreen> {
   // Temporary values
-  // Later these will come from backend.
+  String status = "SOS Activated";
 
-  final String status = "SOS Activated";
+  int guardiansNotified = 0;
 
-  final int guardiansNotified = 3;
+  String locationStatus = "Getting Location...";
 
-  final String locationStatus = "Live Location Shared";
-
-  final String emergencyServices = "Notified";
+  String emergencyServices = "Notified";
 
   @override
   Widget build(BuildContext context) {

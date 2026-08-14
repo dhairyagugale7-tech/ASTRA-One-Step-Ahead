@@ -16,3 +16,5 @@ frontend/.dart_tool/
 # OS
 .DS_Store
 Thumbs.db
+__pycache__/
+*.pyc

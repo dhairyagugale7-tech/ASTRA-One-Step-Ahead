@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/screens/guardian/guardian_management_screen.dart';
+import 'package:frontend/screens/sos/sos_active_screen.dart';
 
 import '../../config/colors.dart';
 import '../../widgets/nightsky.dart';
@@ -12,6 +13,12 @@ import '../journey/journey_setup_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../services/firestore_service.dart';
+
+import '../../services/location_service.dart';
+
+import '../../services/guardian_service.dart';
+
+import '../../services/sos_service.dart';
 
 class HomeScreen extends StatefulWidget {
 
@@ -26,7 +33,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final String safetyMessage = 'Safe to Travel...!';
 
+  final LocationService locationService = LocationService();
+
   String userName = '';
+
+  final SOSService sosService = SOSService();
 
   @override
   void initState() {
@@ -49,6 +60,92 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _activateSOS() async {
+    try {
+      final locationEnabled = await checkLocationService();
+
+      if (!locationEnabled) {
+        return;
+      }
+
+      print("SOS ACTIVATED!");
+
+      final result = await sosService.activateSOS();
+              
+      print(
+        "Primary Guardian: ${result['primaryGuardian']}",
+      );
+
+      print(
+        "SOS Location: ${result['latitude']}, ${result['longitude']}",
+      );
+
+      print(
+        "Total Guardians: ${result['guardians'].length}",
+      );
+    } catch (e) {
+      print("SOS Error: $e");
+    }
+  }
+
+  Future<bool> checkLocationService() async {
+    bool isEnabled =
+        await locationService.isLocationServiceEnabled();
+
+    if (!isEnabled) {
+      final openSettings = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1D1A35),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              "Location Required",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: const Text(
+              "Please turn on your device location to activate SOS.",
+              style: TextStyle(
+                color: Colors.white70,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context, false);
+                },
+                child: const Text(
+                  "Cancel",
+                  style: TextStyle(
+                    color: Colors.white70,
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context, true);
+                },
+                child: const Text("Open Settings"),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (openSettings == true) {
+        await locationService.openLocationSettings();
+      }
+
+      return false;
+    }
+
+    return true;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -198,7 +295,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                       const SizedBox(height: 30),
 
-                      const SOSButton(),
+                      SOSButton(
+                        onSOS: () {
+                          _activateSOS();
+                        },
+                      ),
 
                       const SizedBox(height: 20),
 
