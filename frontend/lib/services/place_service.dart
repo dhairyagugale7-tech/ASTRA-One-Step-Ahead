@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../config/api_keys.dart';
+
 class PlaceService {
-  static const String apiKey = "REMOVED_GOOGLE_MAPS_API_KEY";
+  
 
   Future<List<dynamic>> searchPlaces(String query) async {
     if (query.isEmpty) return [];
@@ -11,7 +13,7 @@ class PlaceService {
     final url = Uri.parse(
       "https://maps.googleapis.com/maps/api/place/autocomplete/json"
       "?input=$query"
-      "&key=$apiKey",
+      "&key=${ApiKeys.googleMapsApiKey}",
     );
 
     final response = await http.get(url);
@@ -35,7 +37,7 @@ class PlaceService {
       "https://maps.googleapis.com/maps/api/place/details/json"
       "?place_id=$placeId"
       "&fields=geometry,name,formatted_address"
-      "&key=$apiKey",
+      "&key=${ApiKeys.googleMapsApiKey}",
     );
 
     final response = await http.get(url);

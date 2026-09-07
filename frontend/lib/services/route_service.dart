@@ -1,11 +1,10 @@
 import 'dart:convert';
-
+import '../config/api_keys.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 
 class RouteService {
-  static const String apiKey =
-      "REMOVED_GOOGLE_MAPS_API_KEY";
+  
 
   Future<Map<String, dynamic>?> getRoute({
     required double originLat,
@@ -17,7 +16,7 @@ class RouteService {
         "https://maps.googleapis.com/maps/api/directions/json"
         "?origin=$originLat,$originLng"
         "&destination=$destinationLat,$destinationLng"
-        "&key=$apiKey";
+        "&key=${ApiKeys.googleMapsApiKey}";
 
     final response = await http.get(Uri.parse(url));
 
