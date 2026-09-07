@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/colors.dart';
 import '../../widgets/glass_card.dart';
@@ -18,15 +19,17 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../services/route_service.dart';
 
-import '../../services/whatsapp_service.dart';
-
+import '../../services/message_service.dart';
 import '../../services/guardian_service.dart';
 
-import 'package:url_launcher/url_launcher.dart';
+import '../../services/guardian_request_service.dart';
+
+
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../journey/journey_completed_screen.dart';
 import '../home/home_screen.dart';
+import '../../services/sos_service.dart';
 
 class JourneyActiveScreen extends StatefulWidget {
 
@@ -51,6 +54,15 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
   final JourneyService journeyService = JourneyService();
 
   final GuardianService guardianService = GuardianService();
+
+  final MessageService messageService = MessageService();
+  
+
+  final GuardianRequestService requestService =
+    GuardianRequestService();
+
+  final SOSService sosService = SOSService();
+
 
   StreamSubscription<Position>? positionSubscription;
 
@@ -173,6 +185,46 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
 
   }
 
+  Future<void> activateSOS() async {
+    try {
+      debugPrint('🚨 ASTRA: SOS activated from Active Journey screen.');
+
+      await sosService.activateSOS();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '🚨 SOS activated. Your guardians have been notified.',
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+            ),
+          ),
+          duration: Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      debugPrint(
+        '❌ ASTRA: Failed to activate SOS: $e',
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'SOS could not be activated: $e',
+            style: const TextStyle(
+              fontFamily: 'PlusJakartaSans',
+            ),
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
   Future<void> updateRoute(Position position) async {
     try {
       final route = await routeService.getRoute(
@@ -230,32 +282,67 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
     }
   }
 
-  Future<void> shareJourneyWithGuardians() async {
+  Future<void> sendJourneyStartedMessage() async {
     try {
-      for (final guardianName in widget.journey.guardians) {
-        final guardian =
-            await guardianService.getGuardianByName(guardianName);
+      final relationships =
+          await requestService.getMyGuardians();
 
-        if (guardian == null) {
-          debugPrint(
-            'Guardian not found: $guardianName',
-          );
-          continue;
-        }
+      // Only active primary guardians receive
+      // the Journey Started message.
+      final primaryGuardians = relationships
+          .where(
+            (guardian) =>
+                guardian.status == 'active' &&
+                guardian.isPrimary,
+          )
+          .toList();
 
-        final trackingLink =
-          'https://astra-one-step-ahead.web.app/?uid=${FirebaseAuth.instance.currentUser!.uid}&journeyId=${widget.journeyId}';
+      debugPrint(
+        'ASTRA: Primary guardians for journey message = '
+        '${primaryGuardians.length}',
+      );
 
-        await WhatsAppService.sendGuardianJourneyMessage(
-          phone: guardian.phone,
-          guardianName: guardian.name,
-          destination: widget.journey.destination,
-          trackingLink: trackingLink,
+      if (primaryGuardians.isEmpty) {
+        debugPrint(
+          'ASTRA: No primary guardians found.',
         );
+        return;
+      }
+
+      final trackingLink =
+          'https://astra-one-step-ahead.web.app/'
+          '?uid=${FirebaseAuth.instance.currentUser!.uid}'
+          '&journeyId=${widget.journeyId}';
+
+      final message =
+          '🛡️ Journey Started\n\n'
+          'Your guardian has started a journey.\n\n'
+          '📍 Destination: ${widget.journey.destination}\n\n'
+          '🗺️ Live Location:\n'
+          '$trackingLink';
+
+      // Send the message to EVERY primary guardian.
+      for (final guardian in primaryGuardians) {
+        try {
+          await messageService.sendMessage(
+            receiverId: guardian.guardianId,
+            message: message,
+          );
+
+          debugPrint(
+            '✅ Journey Started message sent to '
+            '${guardian.guardianId}',
+          );
+        } catch (e) {
+          debugPrint(
+            '❌ Failed to send Journey Started message to '
+            '${guardian.guardianId}: $e',
+          );
+        }
       }
     } catch (e) {
       debugPrint(
-        'Guardian WhatsApp sharing error: $e',
+        '❌ Unable to send Journey Started message: $e',
       );
     }
   }
@@ -310,7 +397,7 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      shareJourneyWithGuardians();
+      sendJourneyStartedMessage();
     });
   }
 
@@ -329,55 +416,101 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
 
   Future<void> completeJourney() async {
     try {
-      // Stop live GPS tracking first
+      // ----------------------------------------------------------
+      // STOP LIVE GPS TRACKING
+      // ----------------------------------------------------------
+
       await stopJourneyTracking();
 
-      // Make sure we have the user's final location
+      // ----------------------------------------------------------
+      // CHECK FINAL LOCATION
+      // ----------------------------------------------------------
+
       if (currentPosition == null) {
-        throw Exception('Current location is not available.');
+        throw Exception(
+          'Current location is not available.',
+        );
       }
 
-      // Send journey completed message with final location
+      // ----------------------------------------------------------
+      // GET ACTIVE PRIMARY GUARDIANS
+      // ----------------------------------------------------------
+
+      final relationships =
+          await requestService.getMyGuardians();
+
+      final primaryGuardians = relationships
+          .where(
+            (guardian) =>
+                guardian.status == 'active' &&
+                guardian.isPrimary,
+          )
+          .toList();
+
+      debugPrint(
+        'ASTRA: Primary guardians for completion message = '
+        '${primaryGuardians.length}',
+      );
+
+      // ----------------------------------------------------------
+      // FINAL LOCATION LINK
+      // ----------------------------------------------------------
+
       final finalLocationLink =
-          'https://www.google.com/maps/search/?api=1&query='
-          '${currentPosition!.latitude},${currentPosition!.longitude}';
+          'https://www.google.com/maps/search/?api=1'
+          '&query=${currentPosition!.latitude},'
+          '${currentPosition!.longitude}';
 
-      for (final guardianName in widget.journey.guardians) {
+      // ----------------------------------------------------------
+      // COMPLETION MESSAGE
+      // ----------------------------------------------------------
+
+      final message =
+          '✅ Journey Completed\n\n'
+          'The journey to '
+          '${widget.journey.destination} '
+          'has been completed safely.\n\n'
+          '📍 Final Location:\n'
+          '$finalLocationLink';
+
+      // ----------------------------------------------------------
+      // SEND TO EVERY PRIMARY GUARDIAN
+      // ----------------------------------------------------------
+
+      for (final guardian in primaryGuardians) {
         try {
-          final guardian =
-              await guardianService.getGuardianByName(guardianName);
-
-          if (guardian == null) {
-            debugPrint('Guardian not found: $guardianName');
-            continue;
-          }
-
-          await WhatsAppService.sendJourneyCompletedMessage(
-            phone: guardian.phone,
-            guardianName: guardian.name,
-            destination: widget.journey.destination,
-            latitude: currentPosition!.latitude,
-            longitude: currentPosition!.longitude,
+          await messageService.sendMessage(
+            receiverId: guardian.guardianId,
+            message: message,
           );
 
           debugPrint(
-            '✅ Journey completed message sent to ${guardian.name}',
+            '✅ Journey completed message sent to '
+            '${guardian.guardianId}',
           );
         } catch (e) {
           debugPrint(
-            '❌ Completion WhatsApp failed for $guardianName: $e',
+            '❌ Completion message failed for '
+            '${guardian.guardianId}: $e',
           );
         }
       }
 
-      // Mark journey as completed in Firestore
+      // ----------------------------------------------------------
+      // MARK JOURNEY AS COMPLETED
+      // ----------------------------------------------------------
+
       await journeyService.endJourney(
         journeyId: widget.journeyId,
       );
 
-      debugPrint('✅ Journey completed successfully.');
+      debugPrint(
+        '✅ Journey completed successfully.',
+      );
     } catch (e) {
-      debugPrint('❌ Error completing journey: $e');
+      debugPrint(
+        '❌ Error completing journey: $e',
+      );
     }
   }
 
@@ -610,7 +743,11 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
 
                       const SizedBox(height: 30),
 
-                      const SOSButton(),
+                      SOSButton(
+                        onSOS: () {
+                          activateSOS();
+                        },
+                      ),
 
                       const SizedBox(height: 100),
 

@@ -20,6 +20,10 @@ import '../../services/guardian_service.dart';
 
 import '../../services/sos_service.dart';
 
+import '../notifications/notifications_screen.dart';
+
+import '../inbox/inbox_screen.dart';
+
 class HomeScreen extends StatefulWidget {
 
   const HomeScreen({super.key});
@@ -68,23 +72,46 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      print("SOS ACTIVATED!");
+      debugPrint('ASTRA: SOS ACTIVATED!');
 
       final result = await sosService.activateSOS();
-              
-      print(
-        "Primary Guardian: ${result['primaryGuardian']}",
+
+      debugPrint(
+        'ASTRA: SOS ID = ${result['sosId']}',
       );
 
-      print(
-        "SOS Location: ${result['latitude']}, ${result['longitude']}",
+      debugPrint(
+        'ASTRA: SOS Location = '
+        '${result['latitude']}, ${result['longitude']}',
       );
 
-      print(
-        "Total Guardians: ${result['guardians'].length}",
+      debugPrint(
+        'ASTRA: Guardians notified = '
+        '${result['guardiansNotified']}',
+      );
+
+      if (!mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SosActiveScreen(),
+        ),
       );
     } catch (e) {
-      print("SOS Error: $e");
+      debugPrint(
+        'ASTRA: SOS Error: $e',
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Unable to activate SOS: $e',
+          ),
+        ),
+      );
     }
   }
 
@@ -358,18 +385,51 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          // ----------------------------------------------------------
+          // NOTIFICATIONS BUTTON
+          // ----------------------------------------------------------
+
+          Positioned(
+            top: 80,
+            left: 20,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        const NotificationsScreen(),
+                  ),
+                );
+              },
+              child: const CircleAvatar(
+                radius: 24,
+                backgroundColor: Color(0xFF8EB6D8),
+                child: Icon(
+                  Icons.notifications_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
+          ),
+
+          // ----------------------------------------------------------
+          // PROFILE BUTTON
+          // ----------------------------------------------------------
+
           Positioned(
             bottom: 20,
             right: 20,
             child: GestureDetector(
               onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProfileScreen(),
-                    ),
-                  );
-                },
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProfileScreen(),
+                  ),
+                );
+              },
               child: const CircleAvatar(
                 radius: 24,
                 backgroundColor: Color(0xFF8EB6D8),
@@ -382,6 +442,34 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
+          // ----------------------------------------------------------
+          // MESSAGE INBOX BUTTON
+          // ----------------------------------------------------------
+
+          Positioned(
+            bottom: 20,
+            left: 20,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        const InboxScreen(),
+                  ),
+                );
+              },
+              child: const CircleAvatar(
+                radius: 24,
+                backgroundColor: Color(0xFF8EB6D8),
+                child: Icon(
+                  Icons.chat_bubble_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -17,7 +17,9 @@ import '../../services/place_service.dart';
 
 import '../../services/tracking_service.dart';
 
-import '../../services/guardian_service.dart';
+import '../../services/guardian_request_service.dart';
+import '../../models/guardian_relationship_model.dart';
+
 import '../home/home_screen.dart';
 class JourneySetupScreen extends StatefulWidget {
   const JourneySetupScreen({super.key});
@@ -30,8 +32,16 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
 
   final JourneyService journeyService = JourneyService();
   final LocationService locationService = LocationService();
-  final GuardianService guardianService = GuardianService();
   final PlaceService placeService = PlaceService();
+
+  final GuardianRequestService _requestService =
+      GuardianRequestService();
+
+  List<GuardianRelationshipModel> _primaryGuardians = [];
+
+  Map<String, Map<String, dynamic>> _guardianDetails = {};
+
+  bool _loadingGuardians = true;
 
   List<dynamic> placeSuggestions = [];
 
@@ -58,20 +68,70 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
     );
   }
 
-  Future<void> loadPrimaryGuardian() async {
+  Future<void> _loadPrimaryGuardians() async {
     try {
-      final guardians = await guardianService.getGuardians();
+      final relationships =
+          await _requestService.getMyGuardians();
 
-      final primaryGuardians =
-          guardians.where((guardian) => guardian.isPrimary).toList();
+      final primaryGuardians = relationships
+          .where(
+            (guardian) =>
+                guardian.status == 'active' &&
+                guardian.isPrimary,
+          )
+          .toList();
 
-      if (primaryGuardians.isNotEmpty) {
-        setState(() {
-          selectedGuardians = [primaryGuardians.first.name];
-        });
+      final Map<String, Map<String, dynamic>> details = {};
+
+      for (final guardian in primaryGuardians) {
+        final user =
+            await _requestService.getUserDetails(
+          guardian.guardianId,
+        );
+
+        if (user != null) {
+          details[guardian.guardianId] = user;
+        }
       }
+
+      if (!mounted) return;
+
+      setState(() {
+        _primaryGuardians = primaryGuardians;
+        _guardianDetails = details;
+
+        selectedGuardians = primaryGuardians
+            .map<String>(
+              (guardian) {
+                final user = details[guardian.guardianId];
+
+                return user?['name'] as String? ?? '';
+              },
+            )
+            .where(
+              (name) => name.isNotEmpty,
+            )
+            .toList();
+
+        _loadingGuardians = false;
+      });
+
+      debugPrint(
+        'ASTRA: Primary guardians = '
+        '${_primaryGuardians.length}',
+      );
     } catch (e) {
-      debugPrint("Error loading primary guardian: $e");
+      debugPrint(
+        'ASTRA: Error loading primary guardians: $e',
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _primaryGuardians = [];
+        _guardianDetails = {};
+        _loadingGuardians = false;
+      });
     }
   }
 
@@ -83,17 +143,16 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
     }
 
     if (selectedGuardians.isEmpty) {
-      showMessage("Please select at least one guardian.");
+      showMessage(
+        "Please select at least one primary guardian.",
+      );
       return false;
     }
 
     if (selectedPlace == null) {
-      showMessage("Please select a destination from the suggestions.");
-      return false;
-    }
-
-    if (selectedGuardians.isEmpty) {
-      showMessage("Please select at least one guardian.");
+      showMessage(
+        "Please select a destination from the suggestions.",
+      );
       return false;
     }
 
@@ -174,7 +233,7 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
 
     WidgetsBinding.instance.addObserver(this);
 
-    loadPrimaryGuardian();
+    _loadPrimaryGuardians();
 
     destinationController.addListener(() async {
 
@@ -267,12 +326,18 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> with WidgetsBin
           builder: (context) => JourneyActiveScreen(journey: journey, journeyId: journeyId),
         ),
       );
-
     } catch (e) {
 
-      showMessage("Something went wrong.");
+        debugPrint(
+          'ASTRA: START JOURNEY ERROR: $e',
+        );
 
-    }
+        if (!mounted) return;
+
+        showMessage(
+          'Journey error: $e',
+        );
+      }
 
   }
 

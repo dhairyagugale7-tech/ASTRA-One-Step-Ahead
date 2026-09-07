@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/guardian/guardian_management_screen.dart';
 
 import '../../config/colors.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/nightsky.dart';
 import '../../widgets/primary_button.dart';
-import '../../services/guardian_service.dart';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../services/guardian_request_service.dart';
 
-import '../../models/guardian_model.dart';
+import 'guardian_management_screen.dart';
 import '../home/home_screen.dart';
 
 class AddGuardianScreen extends StatefulWidget {
@@ -21,50 +19,163 @@ class AddGuardianScreen extends StatefulWidget {
 }
 
 class _AddGuardianScreenState extends State<AddGuardianScreen> {
-
-  final TextEditingController _nameController = TextEditingController();
-
-  final TextEditingController _phoneController = TextEditingController();
-
-  final TextEditingController _relationshipController =
+  final TextEditingController _contactController =
       TextEditingController();
 
-  bool _isPrimary = false;
+  final GuardianRequestService _requestService =
+      GuardianRequestService();
 
   bool isLoading = false;
 
-  final GuardianService _guardianService = GuardianService();
-
   void showMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
+        duration: const Duration(seconds: 4),
       ),
     );
   }
 
-  bool validateInputs() {
-    if (_nameController.text.trim().isEmpty) {
-      showMessage("Please enter guardian's name.");
-      return false;
-    }
+  bool validateInput() {
+    final value = _contactController.text.trim();
 
-    if (_phoneController.text.trim().isEmpty) {
-      showMessage("Please enter guardian's phone number.");
-      return false;
-    }
-
-    if (_relationshipController.text.trim().isEmpty) {
-      showMessage("Please enter relationship.");
-      return false;
-    }
-
-    if (_phoneController.text.trim().length != 10) {
-      showMessage("Phone number must be 10 digits.");
+    if (value.isEmpty) {
+      showMessage(
+        "Please enter the guardian's phone number or email.",
+      );
       return false;
     }
 
     return true;
+  }
+
+  Future<void> sendGuardianRequest() async {
+    if (!validateInput()) return;
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final String input = _contactController.text.trim();
+
+      debugPrint('Guardian request input: $input');
+
+      // ----------------------------------------------------------
+      // STEP 1: Find the ASTRA user
+      // ----------------------------------------------------------
+
+      final String? receiverId =
+          await _requestService.findUserByPhoneOrEmail(input);
+
+      debugPrint('Found receiver ID: $receiverId');
+
+      if (!mounted) return;
+
+      // ----------------------------------------------------------
+      // STEP 2: User not found
+      // ----------------------------------------------------------
+
+      if (receiverId == null) {
+        showMessage(
+          "No ASTRA user found with this phone number or email.",
+        );
+        return;
+      }
+
+      // ----------------------------------------------------------
+      // STEP 3: Send guardian request
+      // ----------------------------------------------------------
+
+      debugPrint('Sending guardian request to: $receiverId');
+
+      debugPrint('ASTRA: User found. Receiver ID = $receiverId');
+
+      debugPrint('ASTRA: Sending guardian request...');
+
+      await _requestService.sendRequest(receiverId);
+
+      debugPrint('ASTRA: Guardian request created successfully.');
+
+      debugPrint('Guardian request sent successfully.');
+
+      if (!mounted) return;
+
+      showMessage(
+        "Guardian request sent successfully!",
+      );
+
+      // ----------------------------------------------------------
+      // STEP 4: Return to Guardian Management
+      // ----------------------------------------------------------
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const GuardianManagementScreen(),
+        ),
+      );
+    } catch (e, stackTrace) {
+      debugPrint('Guardian request ERROR: $e');
+      debugPrint('STACK TRACE: $stackTrace');
+
+      if (!mounted) return;
+
+      final String error = e.toString().toLowerCase();
+
+      // ----------------------------------------------------------
+      // Known errors
+      // ----------------------------------------------------------
+
+      if (error.contains('already sent')) {
+        showMessage(
+          "Guardian request already sent.",
+        );
+      } else if (error.contains('yourself')) {
+        showMessage(
+          "You cannot send a guardian request to yourself.",
+        );
+      } else if (error.contains('permission-denied')) {
+        showMessage(
+          "ASTRA does not have permission to create guardian requests.",
+        );
+      } else if (error.contains('failed-precondition')) {
+        showMessage(
+          "Firestore needs an index for this request. "
+          "Check the Firebase console.",
+        );
+      } else if (error.contains('unauthenticated')) {
+        showMessage(
+          "Please log in again before sending a guardian request.",
+        );
+      } else if (error.contains('network')) {
+        showMessage(
+          "Network error. Please check your internet connection.",
+        );
+      } else {
+        // IMPORTANT:
+        // During development, show the actual Firebase error.
+        showMessage(
+          "Guardian request failed:\n$e",
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _contactController.dispose();
+    super.dispose();
   }
 
   @override
@@ -85,6 +196,10 @@ class _AddGuardianScreenState extends State<AddGuardianScreen> {
                     children: [
                       const SizedBox(height: 70),
 
+                      // --------------------------------------------------
+                      // TITLE
+                      // --------------------------------------------------
+
                       Text(
                         'Add Guardian',
                         textAlign: TextAlign.center,
@@ -99,8 +214,8 @@ class _AddGuardianScreenState extends State<AddGuardianScreen> {
                       const SizedBox(height: 10),
 
                       Text(
-                        'Add someone you trust to receive\n'
-                        'your journey alerts and SOS updates.',
+                        'Send a request to someone you trust\n'
+                        'to become your guardian.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
@@ -112,6 +227,10 @@ class _AddGuardianScreenState extends State<AddGuardianScreen> {
 
                       const SizedBox(height: 20),
 
+                      // --------------------------------------------------
+                      // IMAGE
+                      // --------------------------------------------------
+
                       Image.asset(
                         'assets/images/add_guardian_and_edit_guardian.png',
                         height: 230,
@@ -120,140 +239,56 @@ class _AddGuardianScreenState extends State<AddGuardianScreen> {
 
                       const SizedBox(height: 20),
 
+                      // --------------------------------------------------
+                      // FORM
+                      // --------------------------------------------------
+
                       GlassCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-
-                            CustomTextField(
-                              controller: _nameController,
-                              hintText: 'Full name',
-                              keyboardType: TextInputType.text,
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            CustomTextField(
-                              controller: _phoneController,
-                              hintText: 'Phone Number',
-                              keyboardType: TextInputType.phone,
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            CustomTextField(
-                              controller: _relationshipController,
-                              hintText: 'Relationship',
-                              keyboardType: TextInputType.text,
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            const Text(
-                              'Make Primary?',
+                            Text(
+                              'Find your guardian',
                               style: TextStyle(
                                 fontFamily: 'PlusJakartaSans',
                                 fontSize: 18,
+                                fontWeight: FontWeight.w600,
                                 color: AppColors.heading,
                               ),
                             ),
 
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
 
-                            Row(
-                              children: [
+                            Text(
+                              'Enter their phone number or email '
+                              'registered with ASTRA.',
+                              style: TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                fontSize: 14,
+                                color: AppColors.textPrimary,
+                                height: 1.4,
+                              ),
+                            ),
 
-                                Radio<bool>(
-                                  value: true,
-                                  groupValue: _isPrimary,
-                                  activeColor: AppColors.heading,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _isPrimary = value!;
-                                    });
-                                  },
-                                ),
+                            const SizedBox(height: 20),
 
-                                const Text(
-                                  'Yes',
-                                  style: TextStyle(
-                                    fontFamily: 'PlusJakartaSans',
-                                    fontSize: 16,
-                                    color: AppColors.heading,
-                                  ),
-                                ),
-
-                                const SizedBox(width: 24),
-
-                                Radio<bool>(
-                                  value: false,
-                                  groupValue: _isPrimary,
-                                  activeColor: AppColors.heading,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _isPrimary = value!;
-                                    });
-                                  },
-                                ),
-
-                                const Text(
-                                  'No',
-                                  style: TextStyle(
-                                    fontFamily: 'PlusJakartaSans',
-                                    fontSize: 16,
-                                    color: AppColors.heading,
-                                  ),
-                                ),
-                              ],
+                            CustomTextField(
+                              controller: _contactController,
+                              hintText: 'Phone number or email',
+                              keyboardType:
+                                  TextInputType.emailAddress,
                             ),
 
                             const SizedBox(height: 28),
 
                             Center(
-                              child : PrimaryButton(
-                                text: 'Add Guardian',
-                                onPressed: () async {
-                                  if (!validateInputs()) return;
-
-                                  setState(() {
-                                    isLoading = true;
-                                  });
-
-                                  try {
-                                    GuardianModel guardian = GuardianModel(
-                                      id: '',
-                                      name: _nameController.text.trim(),
-                                      phone: _phoneController.text.trim(),
-                                      relationship: _relationshipController.text.trim(),
-                                      isPrimary: _isPrimary,
-                                      createdAt: Timestamp.now(),
-                                    );
-
-                                    await _guardianService.addGuardian(guardian);
-
-                                    if (!mounted) return;
-
-                                    showMessage("Guardian added successfully!");
-
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const GuardianManagementScreen(),
-                                      ),
-                                    );
-
-                                  } on FirebaseException catch (e) {
-                                    showMessage(e.message ?? "Something went wrong.");
-                                  } catch (_) {
-                                    showMessage("Something went wrong.");
-                                  } finally {
-                                    if (mounted) {
-                                      setState(() {
-                                        isLoading = false;
-                                      });
-                                    }
-                                  }
-                                },
+                              child: PrimaryButton(
+                                text: isLoading
+                                    ? 'Sending...'
+                                    : 'Send Request',
+                                onPressed: isLoading
+                                    ? null
+                                    : sendGuardianRequest,
                               ),
                             ),
                           ],
@@ -267,6 +302,11 @@ class _AddGuardianScreenState extends State<AddGuardianScreen> {
               ),
             ),
           ),
+
+          // --------------------------------------------------------------
+          // BACK BUTTON
+          // --------------------------------------------------------------
+
           Positioned(
             bottom: 20,
             left: 20,
@@ -281,18 +321,23 @@ class _AddGuardianScreenState extends State<AddGuardianScreen> {
               ),
             ),
           ),
+
+          // --------------------------------------------------------------
+          // HOME BUTTON
+          // --------------------------------------------------------------
+
           Positioned(
             bottom: 20,
-            right : 20,
+            right: 20,
             child: GestureDetector(
               onTap: () {
                 Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const HomeScreen(),
-                      ),
-                      (route) => false,
-                    );
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HomeScreen(),
+                  ),
+                  (route) => false,
+                );
               },
               child: const Icon(
                 Icons.home_rounded,

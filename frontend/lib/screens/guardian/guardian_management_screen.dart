@@ -1,136 +1,219 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/profile/profile_screen.dart';
 
 import '../../config/colors.dart';
-import '../../widgets/guardian_card.dart';
+import '../../widgets/glass_card.dart';
 import '../../widgets/nightsky.dart';
-import '../../widgets/primary_button.dart';
 
-import '../../models/guardian_model.dart';
-import '../../services/guardian_service.dart';
-import 'add_guardian_screen.dart';
-
-import 'edit_guardian_screen.dart';
+import '../guardian/my_guardians_screen.dart';
+import '../guardian/users_i_guard_screen.dart';
+import 'users_i_guard_screen.dart';
 import '../home/home_screen.dart';
 
-class GuardianManagementScreen extends StatefulWidget {
+class GuardianManagementScreen extends StatelessWidget {
   const GuardianManagementScreen({super.key});
-
-  @override
-  State<GuardianManagementScreen> createState() => _GuardianManagementScreenState();
-}
-
-class _GuardianManagementScreenState extends State<GuardianManagementScreen> {
-
-  final GuardianService _guardianService = GuardianService();
-
-  List<GuardianModel> guardians = [];
-
-  bool isLoading = true;
-
-  Future<void> loadGuardians() async {
-    guardians = await _guardianService.getGuardians();
-
-    setState(() {
-      isLoading = false;
-    });
-  }
-
-  @override
-    void initState() {
-      super.initState();
-      loadGuardians();
-    }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-
           const NightSky(),
 
           SafeArea(
             child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Column(
-                  children: [
+              padding: const EdgeInsets.symmetric(
+                horizontal: 28,
+                vertical: 60,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // --------------------------------------------------
+                  // TITLE
+                  // --------------------------------------------------
 
-                    const SizedBox(height: 80),
-
-                    const Text(
-                      'Your Guardians',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'PlayfairDisplay',
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.heading,
-                      ),
+                  Text(
+                    'Guardian Management',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'PlayfairDisplay',
+                      fontSize: 38,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.heading,
                     ),
+                  ),
 
-                    if (isLoading)
-                      const Center(
-                        child: CircularProgressIndicator(),
-                      )
-                    else if (guardians.isEmpty)
-                      const Center(
-                        child: Text(
-                          "No Guardians Added Yet",
-                          style: TextStyle(
-                            color: AppColors.heading,
-                            fontSize: 18,
-                          ),
+                  const SizedBox(height: 12),
+
+                  Text(
+                    'Manage your guardian relationships',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 17,
+                      color: AppColors.textPrimary,
+                      height: 1.4,
+                    ),
+                  ),
+
+                  const SizedBox(height: 45),
+
+                  // --------------------------------------------------
+                  // MY GUARDIANS
+                  // --------------------------------------------------
+
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const MyGuardiansScreen(),
                         ),
-                      )
-                    else
-                      Column(
-                        children: guardians.map((guardian) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 18),
-                            child: GuardianCard(
-                              name: guardian.name,
-                              phoneNumber: guardian.phone,
-                              buttonText: "Edit",
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => EditGuardianScreen(
-                                      guardian: guardian,
-                                    ),
-                                  ),
-                                );
-                              },
+                      );
+                    },
+                    child: GlassCard(
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.12),
+                              shape: BoxShape.circle,
                             ),
-                          );
-                        }).toList(),
-                      ),
+                            child: const Icon(
+                              Icons.shield_rounded,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
 
-                    Center(
-                      child: PrimaryButton(
-                        text: 'Add Guardian',
-                        width: 190,
-                        fontSize: 18,
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AddGuardianScreen(),
+                          const SizedBox(width: 18),
+
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'My Guardians',
+                                  style: TextStyle(
+                                    fontFamily: 'PlusJakartaSans',
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.heading,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 6),
+
+                                Text(
+                                  'People who protect and guard you',
+                                  style: TextStyle(
+                                    fontFamily: 'PlusJakartaSans',
+                                    fontSize: 14,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                              ],
                             ),
-                          );
-                        },
+                          ),
+
+                          const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ],
                       ),
                     ),
+                  ),
 
-                    const SizedBox(height: 20),
+                  const SizedBox(height: 22),
 
-                  ],
-                ),
+                  // --------------------------------------------------
+                  // USERS I GUARD
+                  // --------------------------------------------------
+
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const UsersIGuardScreen(),
+                        ),
+                      );
+                    },
+                    child: GlassCard(
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.visibility_rounded,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+
+                          const SizedBox(width: 18),
+
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Users I Guard',
+                                  style: TextStyle(
+                                    fontFamily: 'PlusJakartaSans',
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.heading,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 6),
+
+                                Text(
+                                  'People you protect and guard',
+                                  style: TextStyle(
+                                    fontFamily: 'PlusJakartaSans',
+                                    fontSize: 14,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 35),
+                ],
               ),
             ),
           ),
+
+          // ----------------------------------------------------------
+          // BACK BUTTON
+          // ----------------------------------------------------------
+
           Positioned(
             bottom: 20,
             left: 20,
@@ -145,18 +228,23 @@ class _GuardianManagementScreenState extends State<GuardianManagementScreen> {
               ),
             ),
           ),
+
+          // ----------------------------------------------------------
+          // HOME BUTTON
+          // ----------------------------------------------------------
+
           Positioned(
             bottom: 20,
-            right : 20,
+            right: 20,
             child: GestureDetector(
               onTap: () {
                 Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const HomeScreen(),
-                      ),
-                      (route) => false,
-                    );
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HomeScreen(),
+                  ),
+                  (route) => false,
+                );
               },
               child: const Icon(
                 Icons.home_rounded,
