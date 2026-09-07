@@ -158,21 +158,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 18),
 
                       PrimaryButton(
-                        text: 'SOS Settings',
-                        width: 220,
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SosSettingsScreen(),
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 18),
-
-                      PrimaryButton(
                         text: 'Log Out',
                         width: 220,
                         onPressed: () async {

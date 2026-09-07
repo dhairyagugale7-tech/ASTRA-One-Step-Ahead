@@ -33,9 +33,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final int safetyScore = 100;
+  
 
-  final String safetyMessage = 'Safe to Travel...!';
+
 
   final LocationService locationService = LocationService();
 
@@ -275,38 +275,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
 
                       const SizedBox(height: 35),
-
-                      GlassCard(
-                        child: Column(
-                          children: [
-
-                            Text(
-                              'AI Safety Score : $safetyScore',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-
-                            SizedBox(height: 18),
-
-                            Text(
-                              safetyMessage,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-
-                          ],
-                        ),
-                      ),
 
                       const SizedBox(height: 35),
 

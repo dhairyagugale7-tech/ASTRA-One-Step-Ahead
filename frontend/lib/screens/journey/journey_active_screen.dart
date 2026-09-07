@@ -83,9 +83,9 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
 
   String distance = 'Calculating...';
 
-  final int aiScore = 92;
+  
 
-  final String aiStatus = 'Safe';
+  
 
   Future<void> getCurrentLocation() async {
 
@@ -706,16 +706,6 @@ class _JourneyActiveScreenState extends State<JourneyActiveScreen> {
                               ),
 
                               const SizedBox(height: 18),
-
-                              Text(
-                                'AI Safety Analysis : $aiScore/100 ($aiStatus)',
-                                style: const TextStyle(
-                                  fontFamily: 'PlusJakartaSans',
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
 
                             ],
                           ),
