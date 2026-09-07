@@ -18,3 +18,5 @@ frontend/.dart_tool/
 Thumbs.db
 __pycache__/
 *.pyc
+
+.firebase/
