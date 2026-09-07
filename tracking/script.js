@@ -23,37 +23,66 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 
-// ---------- GET JOURNEY DETAILS FROM URL ----------
+// ---------- GET TRACKING DETAILS FROM URL ----------
 
-const urlParams = new URLSearchParams(window.location.search);
+const urlParams = new URLSearchParams(
+    window.location.search
+);
 
 const userId = urlParams.get("uid");
 const journeyId = urlParams.get("journeyId");
+const sosId = urlParams.get("sosId");
 
 
 // ---------- HTML ELEMENTS ----------
 
-const statusElement = document.getElementById("status");
-const latitudeElement = document.getElementById("latitude");
-const longitudeElement = document.getElementById("longitude");
-const lastUpdatedElement = document.getElementById("lastUpdated");
+const statusElement =
+    document.getElementById("status");
+
+const latitudeElement =
+    document.getElementById("latitude");
+
+const longitudeElement =
+    document.getElementById("longitude");
+
+const lastUpdatedElement =
+    document.getElementById("lastUpdated");
 
 
 // ---------- CHECK URL ----------
 
-if (!userId || !journeyId) {
+// JOURNEY TRACKING
+if (userId && journeyId) {
 
-    statusElement.textContent = "Invalid tracking link.";
+    console.log(
+        "Tracking Journey:",
+        userId,
+        journeyId
+    );
 
-    console.error("Missing uid or journeyId in URL.");
+    startJourneyTracking();
 
+
+// SOS TRACKING
+} else if (sosId) {
+
+    console.log(
+        "Tracking SOS:",
+        sosId
+    );
+
+    startSOSTracking();
+
+
+// INVALID
 } else {
 
-    console.log("Tracking user:", userId);
-    console.log("Tracking journey:", journeyId);
+    statusElement.textContent =
+        "Invalid tracking link.";
 
-    startTracking();
-
+    console.error(
+        "Missing Journey or SOS tracking information."
+    );
 }
 
 
@@ -63,7 +92,10 @@ let map;
 let marker;
 
 
-function initializeMap(latitude, longitude) {
+function initializeMap(
+    latitude,
+    longitude
+) {
 
     map = L.map("map").setView(
         [latitude, longitude],
@@ -75,7 +107,8 @@ function initializeMap(latitude, longitude) {
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
             maxZoom: 19,
-            attribution: "&copy; OpenStreetMap contributors"
+            attribution:
+                "&copy; OpenStreetMap contributors"
         }
     ).addTo(map);
 
@@ -86,13 +119,20 @@ function initializeMap(latitude, longitude) {
     ]).addTo(map);
 
 
-    marker.bindPopup("User's Live Location").openPopup();
+    marker
+        .bindPopup(
+            "User's Live Location"
+        )
+        .openPopup();
 }
 
 
 // ---------- UPDATE MAP ----------
 
-function updateMap(latitude, longitude) {
+function updateMap(
+    latitude,
+    longitude
+) {
 
     const newPosition = [
         latitude,
@@ -102,13 +142,19 @@ function updateMap(latitude, longitude) {
 
     if (!map) {
 
-        initializeMap(latitude, longitude);
+        initializeMap(
+            latitude,
+            longitude
+        );
 
         return;
     }
 
 
-    marker.setLatLng(newPosition);
+    marker.setLatLng(
+        newPosition
+    );
+
 
     map.setView(
         newPosition,
@@ -117,9 +163,11 @@ function updateMap(latitude, longitude) {
 }
 
 
-// ---------- FIRESTORE LIVE TRACKING ----------
+// ============================================================
+// JOURNEY LIVE TRACKING
+// ============================================================
 
-function startTracking() {
+function startJourneyTracking() {
 
     const journeyRef = db
         .collection("users")
@@ -161,8 +209,6 @@ function startTracking() {
                 data.currentLongitude;
 
 
-            // ---------- CHECK LOCATION ----------
-
             if (
                 latitude === undefined ||
                 longitude === undefined
@@ -175,9 +221,9 @@ function startTracking() {
             }
 
 
-            // ---------- UPDATE TEXT ----------
+            statusElement.textContent =
+                "LIVE";
 
-            statusElement.textContent = "LIVE";
 
             latitudeElement.textContent =
                 latitude.toFixed(6);
@@ -190,7 +236,130 @@ function startTracking() {
                 new Date().toLocaleTimeString();
 
 
-            // ---------- UPDATE MAP ----------
+            updateMap(
+                latitude,
+                longitude
+            );
+
+        },
+
+
+        (error) => {
+
+            console.error(
+                "Firestore Journey tracking error:",
+                error
+            );
+
+
+            statusElement.textContent =
+                "Unable to access live location.";
+        }
+    );
+}
+
+
+// ============================================================
+// SOS LIVE TRACKING
+// ============================================================
+
+function startSOSTracking() {
+
+    const sosRef = db
+        .collection("sosEvents")
+        .doc(sosId);
+
+
+    sosRef.onSnapshot(
+
+        (doc) => {
+
+            if (!doc.exists) {
+
+                statusElement.textContent =
+                    "SOS event not found.";
+
+                console.error(
+                    "SOS document does not exist."
+                );
+
+                return;
+            }
+
+
+            const data = doc.data();
+
+
+            console.log(
+                "Firestore SOS update:",
+                data
+            );
+
+
+            // --------------------------------------------------
+            // USE LIVE SOS LOCATION
+            // --------------------------------------------------
+
+            const latitude =
+                data.currentLatitude;
+
+            const longitude =
+                data.currentLongitude;
+
+
+            // --------------------------------------------------
+            // CHECK LOCATION
+            // --------------------------------------------------
+
+            if (
+                latitude === undefined ||
+                longitude === undefined
+            ) {
+
+                statusElement.textContent =
+                    "Waiting for emergency location...";
+
+                return;
+            }
+
+
+            // --------------------------------------------------
+            // UPDATE STATUS
+            // --------------------------------------------------
+
+            statusElement.textContent =
+                "🚨 SOS LIVE";
+
+
+            latitudeElement.textContent =
+                latitude.toFixed(6);
+
+            longitudeElement.textContent =
+                longitude.toFixed(6);
+
+
+            // --------------------------------------------------
+            // UPDATE LAST UPDATED
+            // --------------------------------------------------
+
+            if (data.lastUpdated) {
+
+                lastUpdatedElement.textContent =
+                    data.lastUpdated
+                        .toDate()
+                        .toLocaleTimeString();
+
+            } else {
+
+                lastUpdatedElement.textContent =
+                    new Date()
+                        .toLocaleTimeString();
+            }
+
+
+            // --------------------------------------------------
+            // UPDATE MAP
+            // --------------------------------------------------
 
             updateMap(
                 latitude,
@@ -203,16 +372,13 @@ function startTracking() {
         (error) => {
 
             console.error(
-                "Firestore tracking error:",
+                "Firestore SOS tracking error:",
                 error
             );
 
 
             statusElement.textContent =
-                "Unable to access live location.";
-
+                "Unable to access SOS live location.";
         }
-
     );
-
 }

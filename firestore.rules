@@ -1,0 +1,168 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // USERS
+    // ============================================================
+
+    match /users/{userId} {
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+        && request.auth.uid == userId;
+
+      allow update: if request.auth != null
+        && request.auth.uid == userId;
+
+      allow delete: if false;
+    }
+
+
+    // ============================================================
+    // JOURNEYS
+    // ============================================================
+
+    match /users/{userId}/journeys/{journeyId} {
+      allow read: if true;
+
+      allow create: if request.auth != null
+        && request.auth.uid == userId;
+
+      allow update: if request.auth != null
+        && request.auth.uid == userId;
+
+      allow delete: if request.auth != null
+        && request.auth.uid == userId;
+    }
+
+
+    // ============================================================
+    // GUARDIAN REQUESTS
+    // ============================================================
+
+    match /guardianRequests/{requestId} {
+      allow read: if request.auth != null
+        && (
+          resource.data.senderId == request.auth.uid
+          || resource.data.receiverId == request.auth.uid
+        );
+
+      allow create: if request.auth != null
+        && request.resource.data.senderId == request.auth.uid;
+
+      allow update: if request.auth != null
+        && resource.data.receiverId == request.auth.uid
+        && request.resource.data.senderId
+            == resource.data.senderId
+        && request.resource.data.receiverId
+            == resource.data.receiverId;
+
+      allow delete: if request.auth != null
+        && (
+          resource.data.senderId == request.auth.uid
+          || resource.data.receiverId == request.auth.uid
+        );
+    }
+
+
+    // ============================================================
+    // GUARDIAN RELATIONSHIPS
+    // ============================================================
+
+    match /guardianRelationships/{relationshipId} {
+      allow read: if request.auth != null
+        && (
+          resource.data.userId == request.auth.uid
+          || resource.data.guardianId == request.auth.uid
+        );
+
+      allow create: if request.auth != null
+        && (
+          request.resource.data.userId == request.auth.uid
+          || request.resource.data.guardianId == request.auth.uid
+        );
+
+      allow update: if request.auth != null
+        && (
+          resource.data.userId == request.auth.uid
+          || resource.data.guardianId == request.auth.uid
+        );
+
+      allow delete: if request.auth != null
+        && (
+          resource.data.userId == request.auth.uid
+          || resource.data.guardianId == request.auth.uid
+        );
+    }
+
+
+    // ============================================================
+    // MESSAGES
+    // ============================================================
+
+    match /messages/{messageId} {
+      allow read: if request.auth != null
+        && (
+          resource.data.senderId == request.auth.uid
+          || resource.data.receiverId == request.auth.uid
+        );
+
+      allow create: if request.auth != null
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.receiverId != request.auth.uid
+        && request.resource.data.message is string;
+
+      allow update: if false;
+
+      allow delete: if request.auth != null
+        && (
+          resource.data.senderId == request.auth.uid
+          || resource.data.receiverId == request.auth.uid
+        );
+    }
+
+
+    // ============================================================
+    // SOS EVENTS
+    // ============================================================
+
+    match /sosEvents/{sosId} {
+
+      // SOS can only be created by the authenticated user
+      // who owns the SOS event.
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+
+      // Public read is required for the live SOS tracking webpage.
+      allow read: if true;
+
+      // Only the SOS owner can update the event.
+      allow update: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+
+      // SOS events cannot be deleted from the client.
+      allow delete: if false;
+    }
+
+
+    // ============================================================
+    // NOTIFICATIONS
+    // ============================================================
+
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null
+        && resource.data.receiverId == request.auth.uid;
+
+      allow update: if request.auth != null
+        && resource.data.receiverId == request.auth.uid;
+
+      // Only Firebase Cloud Functions should create these.
+      allow create: if false;
+
+      allow delete: if request.auth != null
+        && resource.data.receiverId == request.auth.uid;
+    }
+  }
+}
